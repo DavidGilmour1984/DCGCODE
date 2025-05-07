@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Half-Life Quiz</title>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      padding: 2em;
+      background-color: #f5f5f5;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+      margin: auto;
+    }
+    button {
+      margin: 1em;
+      padding: 0.5em 1.2em;
+      font-size: 1.2rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background-color: #007BFF;
+      color: white;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .hidden {
+      display: none;
+    }
+    #working {
+      margin-top: 1em;
+      font-size: 1.1em;
+      color: #333;
+      text-align: left;
+    }
+    #feedback {
+      margin-top: 1em;
+      font-size: 1.2em;
+    }
+    #question {
+      font-size: 1.2em;
+      color: #333;
+    }
+    select, #answerInput {
+      font-size: 1.2em;
+      padding: 0.25em;
+      margin-top: 1em;
+      border-radius: 8px;
+      width: 200px;
+    }
+    ul {
+      padding-left: 1.2em;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Half-Life Quiz</h2>
+    <div id="question"></div>
+    <input type="text" id="answerInput" placeholder="Answer to 1dp" />
+    <select id="unitSelect">
+      <option value="" disabled selected>Select unit</option>
+      <option value="g">g</option>
+      <option value="years">years</option>
+    </select>
+    <button onclick="checkAnswer()">Submit Answer</button>
+    <button onclick="showWorking()">Show Working</button>
+    <div id="feedback" class="hidden"></div>
+    <div id="working" class="hidden"></div>
+    <div id="tally">Correct answers: <span id="correctCount">0</span> / <span id="totalCount">0</span></div>
+  </div>
+
+<script>
+let current = {};
+let correctCount = 0;
+let totalCount = 0;
+let usedWorking = false;
+
+function getRandom(min, max) {
+  return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
+function choose(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function generateQuestion() {
+  document.getElementById('feedback').classList.add('hidden');
+  document.getElementById('working').classList.add('hidden');
+  document.getElementById('working').innerHTML = "";
+  usedWorking = false;
+
+  const types = ['findFinalMass', 'findHalfLife', 'findInitialMass'];
+  const type = choose(types);
+
+  let question = '', correctAnswer = '', correctUnit = '', workingSteps = '';
+  let startMass, finalMass, halfLife, numberOfHalfLives, time;
+
+if (type === 'findFinalMass') {
+  startMass = getRandom(40, 200);
+  halfLife = getRandom(2, 10);
+  numberOfHalfLives = getRandom(1, 5);
+  time = halfLife * numberOfHalfLives;
+  const final = startMass * Math.pow(0.5, numberOfHalfLives);
+  correctAnswer = final.toFixed(1);
+  question = `A sample has a half-life of ${halfLife} years and an initial mass of ${startMass}g. What is the mass remaining after ${time} years?`;
+  correctUnit = "g";
+
+  let mass = startMass;
+  let steps = "";
+  for (let i = 1; i <= numberOfHalfLives; i++) {
+    mass /= 2;
+    steps += `<li>After ${i} half-life: ${mass.toFixed(2)}g</li>`;
+  }
+
+  workingSteps = `
+    <ul>
+      <li>Time ÷ Half-life = ${time} ÷ ${halfLife} = ${numberOfHalfLives} half-lives</li>
+      <li>Start mass = ${startMass}g</li>
+      ${steps}
+      <li>Final mass = ${final.toFixed(1)}g</li>
+    </ul>
+  `;
+}
+
+
+  else if (type === 'findHalfLife') {
+    startMass = getRandom(50, 200);
+    numberOfHalfLives = getRandom(1, 5);
+    const fraction = Math.pow(0.5, numberOfHalfLives);
+    finalMass = startMass * fraction;
+    halfLife = getRandom(2, 10);
+    time = halfLife * numberOfHalfLives;
+    correctAnswer = halfLife.toFixed(1);
+    question = `A sample starts with ${startMass}g and decreases to ${finalMass.toFixed(1)}g after ${time} years. What is its half-life?`;
+    correctUnit = "years";
+
+    // Repeated halving
+ 
+    let steps = "";
+       let currentMass = startMass;
+    let count = 0;
+    while (currentMass > finalMass + 0.1) {
+      currentMass /= 2;
+      count++;
+      steps += `<li>Halve ${count}: ${currentMass.toFixed(2)}g</li>`;
+    }
+
+    workingSteps = `
+      <ul>
+        <li>Start mass = ${startMass}g</li>
+        <li>Final mass = ${finalMass.toFixed(1)}g</li>
+        ${steps}
+        <li>Total half-lives = ${count}</li>
+        <li>Half-life = ${time} ÷ ${count} = ${halfLife.toFixed(1)} years</li>
+      </ul>
+    `;
+  }
+
+else if (type === 'findInitialMass') {
+  finalMass = getRandom(10, 100);
+  halfLife = getRandom(2, 10);
+  numberOfHalfLives = getRandom(1, 5);
+  time = halfLife * numberOfHalfLives;
+  startMass = finalMass / Math.pow(0.5, numberOfHalfLives);
+  correctAnswer = startMass.toFixed(1);
+  question = `A sample has a half-life of ${halfLife} years and a mass of ${finalMass}g after ${time} years. What was its original mass?`;
+  correctUnit = "g";
+
+  let mass = finalMass;
+  let steps = "";
+  for (let i = 1; i <= numberOfHalfLives; i++) {
+    mass *= 2;
+    steps += `<li>Go back ${i} half-life: ${mass.toFixed(2)}g</li>`;
+  }
+
+  workingSteps = `
+    <ul>
+      <li>Time ÷ Half-life = ${time} ÷ ${halfLife} = ${numberOfHalfLives} half-lives</li>
+      <li>Final mass = ${finalMass}g</li>
+      ${steps}
+      <li>Start mass = ${startMass.toFixed(1)}g</li>
+    </ul>
+  `;
+}
+
+
+
+  current = { question, correctAnswer, correctUnit, workingSteps };
+  document.getElementById('question').innerText = question;
+}
+
+function checkAnswer() {
+  const answerInput = document.getElementById('answerInput').value.trim();
+  const unitSelect = document.getElementById('unitSelect').value;
+  const feedback = document.getElementById('feedback');
+
+  const entered = parseFloat(answerInput);
+  const correct = parseFloat(current.correctAnswer);
+  const correctIsInteger = (Math.abs(correct - Math.round(correct)) < 0.01);
+
+  let isCorrect = false;
+  if (!isNaN(entered)) {
+    if (correctIsInteger) {
+      isCorrect = Math.abs(entered - Math.round(correct)) <= 0.1;
+    } else {
+      isCorrect = Math.abs(entered - correct) <= 0.1;
+    }
+  }
+
+  totalCount++;
+  if (isCorrect && unitSelect === current.correctUnit) {
+    if (!usedWorking) {
+      correctCount++;
+      feedback.textContent = `✅ Correct! Answer: ${current.correctAnswer} ${current.correctUnit}`;
+      feedback.style.color = "#5bc0de";
+    } else {
+      feedback.textContent = `✅ Correct! But no point awarded because you viewed the working.`;
+      feedback.style.color = "#f0ad4e";
+    }
+  } else {
+    feedback.textContent = `❌ Incorrect. Correct answer: ${current.correctAnswer} ${current.correctUnit}`;
+    feedback.style.color = "#d9534f";
+  }
+
+  document.getElementById('correctCount').innerText = correctCount;
+  document.getElementById('totalCount').innerText = totalCount;
+  feedback.classList.remove('hidden');
+
+  setTimeout(() => {
+    generateQuestion();
+    document.getElementById('answerInput').value = '';
+    document.getElementById('unitSelect').selectedIndex = 0;
+  }, 2000);
+}
+
+function showWorking() {
+  usedWorking = true;
+  const workingDiv = document.getElementById('working');
+  workingDiv.innerHTML = current.workingSteps;
+  workingDiv.classList.remove('hidden');
+}
+
+generateQuestion();
+</script>
+</body>
+</html>
