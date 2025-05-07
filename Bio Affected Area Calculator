@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Area Drawing</title>
+    <style>
+    body {
+        display: flex;
+        height: 100vh;
+        margin: 0;
+        font-family: Helvetica, sans-serif;
+        background-color: #f4f4f4;
+    }
+
+    #leftPanel {
+        width: 20%;
+        padding: 20px;
+        background-color: #2f2f2f;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+    }
+
+    #leftPanel h1 {
+        font-size: 24px;
+        margin-bottom: 20px;
+    }
+
+    #buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    button {
+        padding: 12px 24px;
+        font-size: 16px;
+        cursor: pointer;
+        background-color: #555;
+        border: none;
+        border-radius: 8px;
+        color: white;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    button:hover {
+        background-color: #777;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    button.active {
+        border-color: #fff;
+    }
+
+    #result {
+        font-size: 16px;
+        color: white;
+        margin-top: 20px;
+        background-color: #333;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    input[type="file"] {
+        display: none;
+    }
+
+    label {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 12px 24px;
+        background-color: #555;
+        color: white;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-top: 10px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    label:hover {
+        background-color: #777;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    #canvasWrapper {
+        width: 80%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+
+    #canvas {
+        border: 1px solid #ccc;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        cursor: crosshair;
+        max-width: 100%;
+        height: auto;
+    }
+    </style>
+
+</head>
+<body>
+    <div id="leftPanel">
+        <h1>Cover Percentage Calculator</h1>
+        <div id="buttons">
+            <label for="imageUpload">Upload Image</label>
+            <input type="file" id="imageUpload" accept="image/*" />
+            <button id="drawRedButton">Draw Outline</button>
+            <button id="drawBlueButton">Draw Effected Areas</button>
+            <button id="calculateAreaButton">Calculate Area</button>
+        </div>
+        <div id="result"></div>
+    </div>
+
+    <div id="canvasWrapper">
+        <canvas id="canvas"></canvas>
+    </div>
+</body>
+
+<script>
+    const drawRedButton = document.getElementById('drawRedButton');
+    const drawBlueButton = document.getElementById('drawBlueButton');
+    const calculateAreaButton = document.getElementById('calculateAreaButton');
+    const imageUpload = document.getElementById('imageUpload');
+    const canvas = document.getElementById('canvas');
+    const context = canvas.getContext('2d');
+    const result = document.getElementById('result');
+
+    let image = new Image();
+    let drawingRedArea = false;
+    let drawingBlueArea = false;
+    let redArea = [];
+    let blueAreas = [];
+    let currentDraw = [];
+    let startX, startY;
+
+    imageUpload.addEventListener('change', handleImageUpload);
+    drawRedButton.addEventListener('click', () => setDrawingMode('red'));
+    drawBlueButton.addEventListener('click', () => setDrawingMode('blue'));
+    calculateAreaButton.addEventListener('click', calculateArea);
+
+    function handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                image.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    image.onload = function() {
+        const aspectRatio = image.width / image.height;
+        const maxWidth = window.innerWidth * 0.8;
+        const maxHeight = window.innerHeight;
+
+        if (image.width > maxWidth || image.height > maxHeight) {
+            if (image.width / maxWidth > image.height / maxHeight) {
+                canvas.width = maxWidth;
+                canvas.height = maxWidth / aspectRatio;
+            } else {
+                canvas.height = maxHeight;
+                canvas.width = maxHeight * aspectRatio;
+            }
+        } else {
+            canvas.width = image.width;
+            canvas.height = image.height;
+        }
+
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    };
+
+    canvas.addEventListener('mousedown', (event) => {
+        const rect = canvas.getBoundingClientRect();
+        startX = event.clientX - rect.left;
+        startY = event.clientY - rect.top;
+
+        if (drawingRedArea) {
+            redArea = [{ x: startX, y: startY }];
+            currentDraw = redArea;
+        } else if (drawingBlueArea) {
+            blueAreas.push([{ x: startX, y: startY }]);
+            currentDraw = blueAreas[blueAreas.length - 1];
+        }
+    });
+
+    canvas.addEventListener('mousemove', (event) => {
+        if (currentDraw.length > 0) {
+            const rect = canvas.getBoundingClientRect();
+            const currentX = event.clientX - rect.left;
+            const currentY = event.clientY - rect.top;
+
+            currentDraw.push({ x: currentX, y: currentY });
+            drawCanvas();
+        }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+        if (currentDraw.length > 1) {
+            currentDraw = [];
+        }
+    });
+
+    function drawCanvas() {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+        // Draw Red Area (Freeform)
+        context.strokeStyle = 'red';
+        context.lineWidth = 2;
+        if (redArea.length > 1) {
+            context.beginPath();
+            context.moveTo(redArea[0].x, redArea[0].y);
+            redArea.forEach(point => {
+                context.lineTo(point.x, point.y);
+            });
+            context.closePath();
+            context.stroke();
+        }
+
+        // Draw Blue Areas (Freeform)
+        blueAreas.forEach(blueArea => {
+            context.strokeStyle = 'blue';
+            context.lineWidth = 2;
+            if (blueArea.length > 1) {
+                context.beginPath();
+                context.moveTo(blueArea[0].x, blueArea[0].y);
+                blueArea.forEach(point => {
+                    context.lineTo(point.x, point.y);
+                });
+                context.closePath();
+                context.stroke();
+            }
+        });
+    }
+
+    function calculateArea() {
+        if (redArea.length > 1) {
+            let redAreaPixels = countPixelsInArea(redArea);
+            
+            let totalBluePixels = 0;
+            blueAreas.forEach(blueArea => {
+                totalBluePixels += countPixelsInArea(blueArea);
+            });
+
+            let percentage = (totalBluePixels / redAreaPixels) * 100;
+            result.innerHTML = `Area of object: ${redAreaPixels}<br>Affected area: ${totalBluePixels}<br>Affected Area: ${percentage.toFixed(2)}%`;
+        } else {
+            result.innerHTML = "Please draw the red area first.";
+        }
+    }
+
+    function countPixelsInArea(area) {
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        let pixelsInArea = 0;
+
+        for (let y = 0; y < canvas.height; y++) {
+            for (let x = 0; x < canvas.width; x++) {
+                if (isPointInsidePolygon(x, y, area)) {
+                    const index = (y * canvas.width + x) * 4;
+                    if (data[index + 3] > 0) {
+                        pixelsInArea++;
+                    }
+                }
+            }
+        }
+
+        return pixelsInArea;
+    }
+
+    function isPointInsidePolygon(px, py, polygon) {
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const xi = polygon[i].x, yi = polygon[i].y;
+            const xj = polygon[j].x, yj = polygon[j].y;
+
+            const intersect = ((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    function setDrawingMode(mode) {
+        if (mode === 'red') {
+            drawingRedArea = true;
+            drawingBlueArea = false;
+            drawRedButton.classList.add('active');
+            drawBlueButton.classList.remove('active');
+            drawRedButton.style.backgroundColor = 'red';
+            drawBlueButton.style.backgroundColor = '';
+        } else if (mode === 'blue') {
+            drawingRedArea = false;
+            drawingBlueArea = true;
+            drawBlueButton.classList.add('active');
+            drawRedButton.classList.remove('active');
+            drawBlueButton.style.backgroundColor = 'blue';
+            drawRedButton.style.backgroundColor = '';
+        }
+    }
+</script>
+
+
+</body>
+</html>
