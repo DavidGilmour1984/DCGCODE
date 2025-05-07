@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SHM Simulator</title>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      background-color: #f5f5f5;
+      padding: 0.5em;
+      text-align: center;
+    }
+
+    .card {
+      background: white;
+      padding: 1.5em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 1300px;
+      margin: auto;
+    }
+
+    canvas {
+      background-color: #ffffff;
+      border: 1px solid #ccc;
+      margin: 0.5em;
+      border-radius: 12px;
+    }
+
+    label {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+
+    input[type="number"] {
+      width: 80px;
+      padding: 0.4em;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+
+    button {
+      margin-top: 1em;
+      padding: 0.5em 1.6em;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #28a745;
+      color: white;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+
+    .flex-row {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: nowrap;
+    }
+
+    .phasor-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-left: 1em;
+    }
+
+    .phasor-container {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      margin-bottom: 0.5em;
+    }
+
+    .value-display {
+      margin-left: 1em;
+      font-weight: bold;
+      text-align: left;
+      min-width: 120px;
+    }
+
+    #warning {
+      color: red;
+      font-weight: bold;
+      margin-top: 0.5em;
+    }
+
+    .pendulum-stats {
+      margin-top: 0.5em;
+      font-size: 1rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Simple Harmonic Motion: Pendulum</h2>
+    <label for="lengthInput">Pendulum (m):</label>
+    <input type="number" id="lengthInput" value="3" step="0.1" min="0.1">
+    <label for="gravityInput">Gravity:</label>
+    <input type="number" id="gravityInput" value="9.81" step="0.1" min="0.1">
+    <label for="displacementInput">Displacement (m):</label>
+    <input type="number" id="displacementInput" value="0.3" step="0.01" min="0">
+
+    <button id="pauseBtn" onclick="togglePause()">Pause</button>
+
+    <br><br>
+    <div class="flex-row">
+      <canvas id="pendulumCanvas" width="400" height="500"></canvas>
+
+      <div class="phasor-stack">
+        <div id="warning"></div>
+
+    <div class="pendulum-stats">
+      <div id="periodValue">Period: 0.00 s</div>
+      <div id="angularVelocityValue">Angular Velocity: 0.00 rad/s</div>
+    </div>
+        <div class="phasor-container">
+          <canvas id="phasorDisplacement" width="100" height="100"></canvas>
+          <div class="value-display" id="dispValue">x = 0.00 m</div>
+        </div>
+
+        <div class="phasor-container">
+          <canvas id="phasorVelocity" width="100" height="100"></canvas>
+          <div class="value-display" id="velValue">v = 0.00 m/s</div>
+        </div>
+
+        <div class="phasor-container">
+          <canvas id="phasorAcceleration" width="100" height="100"></canvas>
+          <div class="value-display" id="accValue">a = 0.00 m/s²</div>
+        </div>
+      </div>
+    </div>
+    <br>
+
+    
+  </div>
+
+<script>
+  let g = 9.81; // Initial gravity value
+  let length = 3;
+  let displacement = 0.3;
+  let theta = Math.asin(displacement / length);
+  let omega = 0;
+  let dt = 0.02;
+  let time = 0;
+  let isPaused = false;
+
+  const pendulumCanvas = document.getElementById("pendulumCanvas");
+  const pendCtx = pendulumCanvas.getContext("2d");
+
+  const dispCanvas = document.getElementById("phasorDisplacement");
+  const velCanvas = document.getElementById("phasorVelocity");
+  const accCanvas = document.getElementById("phasorAcceleration");
+
+  const dispCtx = dispCanvas.getContext("2d");
+  const velCtx = velCanvas.getContext("2d");
+  const accCtx = accCanvas.getContext("2d");
+
+  // Small angle approximation threshold (10% of the pendulum length)
+  const SMALL_ANGLE_THRESHOLD = 0.1;
+
+  // Function to display the warning
+  function checkDisplacementWarning() {
+    const warningEl = document.getElementById("warning");
+    const maxAllowedDisplacement = length * SMALL_ANGLE_THRESHOLD;
+
+    if (displacement > maxAllowedDisplacement) {
+      warningEl.textContent = `Warning: The small angle approximation is no longer valid for displacements greater than ${maxAllowedDisplacement.toFixed(2)} m (10% of the pendulum length).`;
+    } else {
+      warningEl.textContent = ""; // Clear the warning if displacement is within limits
+    }
+  }
+
+  function resetSimulation() {
+    theta = Math.asin(displacement / length);
+    omega = 0;
+    time = 0;
+    drawPendulum();
+    drawPhasor(dispCtx, 0, "#007bff");
+    drawPhasor(velCtx, Math.PI / 2, "#ffc107");
+    drawPhasor(accCtx, Math.PI, "#dc3545");
+    document.getElementById("dispValue").innerText = `x = 0.00 m`;
+    document.getElementById("velValue").innerText = `v = 0.00 m/s`;
+    document.getElementById("accValue").innerText = `a = 0.00 m/s²`;
+    checkDisplacementWarning(); // Check warning after reset
+    updateStats(); // Update pendulum stats after reset
+  }
+
+  function updatePhysics() {
+    const alpha = -(g / length) * Math.sin(theta);
+    omega += alpha * dt;
+    theta += omega * dt;
+    time += dt;
+  }
+
+  function drawPendulum() {
+    pendCtx.clearRect(0, 0, pendulumCanvas.width, pendulumCanvas.height);
+    const originX = pendulumCanvas.width / 2;
+    const originY = 50;
+    const bobX = originX + length * 100 * Math.sin(theta);
+    const bobY = originY + length * 100 * Math.cos(theta);
+    pendCtx.beginPath();
+    pendCtx.moveTo(originX, originY);
+    pendCtx.lineTo(bobX, bobY);
+    pendCtx.strokeStyle = "#333";
+    pendCtx.lineWidth = 2;
+    pendCtx.stroke();
+    pendCtx.beginPath();
+    pendCtx.arc(bobX, bobY, 10, 0, 2 * Math.PI);
+    pendCtx.strokeStyle = "#007bff";
+    pendCtx.lineWidth = 3;
+    pendCtx.stroke();
+  }
+
+  function drawPhasor(ctx, angle, color) {
+    const centerX = ctx.canvas.width / 2;
+    const centerY = ctx.canvas.height / 2;
+    const radius = 40;
+    const x = centerX + radius * Math.cos(angle);
+    const y = centerY + radius * Math.sin(angle);
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.strokeStyle = '#ccc';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(x, y);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  function updateStats() {
+    const period = 2 * Math.PI * Math.sqrt(length / g); // Period calculation
+    const angularVelocity = Math.sqrt(g / length); // Angular velocity calculation
+
+    document.getElementById("periodValue").innerText = `Period: ${period.toFixed(2)} s`;
+    document.getElementById("angularVelocityValue").innerText = `Angular Velocity: ${angularVelocity.toFixed(2)} rad/s`;
+  }
+
+  function animate() {
+    if (!isPaused) {
+      updatePhysics();
+      drawPendulum();
+
+      const T = 2 * Math.PI * Math.sqrt(length / g);
+      const omega_phasor = 2 * Math.PI / T;
+      const baseAngle = -omega_phasor * time;
+
+      drawPhasor(dispCtx, baseAngle, "#007bff");
+      drawPhasor(velCtx, baseAngle + Math.PI / 2, "#ffc107");
+      drawPhasor(accCtx, baseAngle + Math.PI, "#dc3545");
+
+      const displacementValue = length * Math.sin(theta);
+      const velocity = length * omega * Math.cos(theta);
+      const acceleration = -(g * Math.sin(theta));
+
+      document.getElementById("dispValue").innerText = `x = ${displacementValue.toFixed(2)} m`;
+      document.getElementById("velValue").innerText = `v = ${velocity.toFixed(2)} m/s`;
+      document.getElementById("accValue").innerText = `a = ${acceleration.toFixed(2)} m/s²`;
+
+      updateStats(); // Update period and angular velocity on each frame
+    }
+    requestAnimationFrame(animate);
+  }
+
+  function togglePause() {
+    isPaused = !isPaused;
+    document.getElementById("pauseBtn").innerText = isPaused ? "Resume" : "Pause";
+  }
+
+  document.getElementById("lengthInput").addEventListener("input", function () {
+    const val = parseFloat(this.value);
+    if (val > 0) {
+      length = val;
+      displacement = Math.min(displacement, length); // Ensure displacement doesn't exceed length
+      checkDisplacementWarning(); // Update warning based on new length
+      resetSimulation();
+    }
+  });
+
+  document.getElementById("gravityInput").addEventListener("input", function () {
+    g = parseFloat(this.value);
+    checkDisplacementWarning();
+    resetSimulation();
+  });
+
+  document.getElementById("displacementInput").addEventListener("input", function () {
+    displacement = parseFloat(this.value);
+    displacement = Math.min(displacement, length); // Ensure displacement doesn't exceed length
+    resetSimulation();
+  });
+
+  // Start animation loop
+  animate();
+</script>
+</body>
+</html>
