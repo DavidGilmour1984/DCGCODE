@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Serial CO2 Monitor</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+
+        body { font-family: Arial, sans-serif; display: flex; height: 100vh; }
+
+        #left-panel { width: 30%; padding: 10px; border-right: 2px solid #ccc; }
+
+        #right-panel { width: 70%; padding: 10px; }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        th, td { border: 1px solid #ccc; padding: 5px; text-align: left; }
+
+        button { margin: 5px; padding: 10px; cursor: pointer; }
+
+        input { margin: 5px; padding: 5px; }
+
+        .export-container { display: flex; align-items: center; }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div id="left-panel">
+
+        <h2>CO2 Logger</h2>
+
+        <button onclick="startSerial()">Connect to CO2 Logger</button>
+
+        <br>
+
+        <button onclick="clearData()">Clear Data</button>
+
+        <br>
+
+        <div class="export-container">
+
+            <input type="text" id="fileName" placeholder="Enter file name">
+
+            <button onclick="saveCSV()">Export Data</button>
+
+        </div>
+
+        <br>
+
+        <table>
+
+            <thead>
+
+                <tr>
+
+                    <th>Time (s)</th>
+
+                    <th>CO2 (ppm)</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody id="dataTable"></tbody>
+
+        </table>
+
+    </div>
+
+    <div id="right-panel">
+
+        <canvas id="co2Chart"></canvas>
+
+    </div>
+
+
+    <script>
+
+        let port, reader, keepReading = false;
+
+        let csvData = "Time (s),CO2 (ppm)\n";
+
+        const timeValues = [];
+
+        const co2Values = [];
+
+        let buffer = "";
+
+
+        const ctx = document.getElementById('co2Chart').getContext('2d');
+
+        const chart = new Chart(ctx, {
+
+            type: 'line',
+
+            data: {
+
+                labels: timeValues,
+
+                datasets: [{
+
+                    label: 'CO2 (ppm)',
+
+                    data: co2Values,
+
+                    borderColor: 'blue',
+
+                    fill: false
+
+                }]
+
+            },
+
+            options: {
+
+                scales: { 
+
+                    x: { title: { display: true, text: 'Time (s)' } },
+
+                    y: { 
+
+                        title: { display: true, text: 'CO2 (ppm)' },
+
+                        ticks: { callback: (value) => Math.round(value) } 
+
+                    } 
+
+                }
+
+            }
+
+        });
+
+
+        async function startSerial() {
+
+            if (!('serial' in navigator)) {
+
+                alert('Web Serial not supported in this browser.');
+
+                return;
+
+            }
+
+            try {
+
+                port = await navigator.serial.requestPort();
+
+                await port.open({ baudRate: 9600 });
+
+                keepReading = true;
+
+                readSerial();
+
+            } catch (err) {
+
+                alert('Error: ' + err.message);
+
+            }
+
+        }
+
+
+        async function readSerial() {
+
+            reader = port.readable.getReader();
+
+            let decoder = new TextDecoder();
+
+            while (keepReading) {
+
+                try {
+
+                    const { value, done } = await reader.read();
+
+                    if (done) break;
+
+                    buffer += decoder.decode(value);
+
+                    let lines = buffer.split('\n');
+
+                    buffer = lines.pop(); 
+
+                    lines.forEach(line => processLine(line.trim()));
+
+                } catch (err) {
+
+                    console.error('Read error: ', err);
+
+                    break;
+
+                }
+
+            }
+
+            reader.releaseLock();
+
+        }
+
+
+        function processLine(line) {
+
+            let parts = line.split(' ');
+
+            if (parts.length === 2) {
+
+                let time = parts[0];
+
+                let co2 = Math.round(parseFloat(parts[1]));
+
+                csvData += time + ',' + co2 + '\n';
+
+                let table = document.getElementById('dataTable');
+
+                let row = table.insertRow();
+
+                row.insertCell(0).innerText = time;
+
+                row.insertCell(1).innerText = co2;
+
+                if (timeValues.length > 50) {
+
+                    timeValues.shift();
+
+                    co2Values.shift();
+
+                }
+
+                timeValues.push(time);
+
+                co2Values.push(co2);
+
+                chart.update();
+
+            }
+
+        }
+
+
+        function clearData() {
+
+            document.getElementById('dataTable').innerHTML = '';
+
+            csvData = "Time (s),CO2 (ppm)\n";
+
+            timeValues.length = 0;
+
+            co2Values.length = 0;
+
+            chart.update();
+
+        }
+
+
+        function saveCSV() {
+
+            let fileName = document.getElementById('fileName').value || 'co2_data';
+
+            const blob = new Blob([csvData], { type: 'text/csv' });
+
+            const link = document.createElement('a');
+
+            link.href = URL.createObjectURL(blob);
+
+            link.download = fileName + '.csv';
+
+            link.click();
+
+        }
+
+    </script>
+
+</body>
+
+</html>
