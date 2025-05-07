@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi COM Port Data Streaming</title>
+    <style>
+        body {
+            font-family: Helvetica, sans-serif;
+            text-align: left;
+            display: flex;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        .sidebar {
+            width: 20%;
+            padding: 20px;
+            background: #333;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .sidebar label, .sidebar input {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .sidebar button {
+            font-size: 18px;
+            margin: 5px 0;
+            width: 100%;
+            padding: 10px;
+            background: #444;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .sidebar button:hover {
+            background: #555;
+        }
+        .main {
+            width: 80%;
+            display: flex;
+            flex-direction: column;
+            align-items: top;
+            justify-content: top;
+            padding: 20px;
+        }
+        .button-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+        }
+        .sensor-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        button {
+            font-size: 20px;
+            padding: 12px;
+            width: 150px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            background: #ff0000;
+            color: white;
+        }
+        button:hover {
+            background: #9bf589;
+        }
+        .active {
+            background-color: green !important;
+        }
+        table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+th, td {
+    border: 1px solid black;
+    padding: 8px;
+    text-align: center;
+}
+
+th {
+    background-color: #ddd;
+}
+      .sidebar input {
+    width: 100%;
+    padding: 8px;
+    font-size: 16px;
+    border: 1px solid white;
+    background: #555;
+    color: white;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.sidebar input::placeholder {
+    color: #ccc;
+    opacity: 0.7;
+}
+
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <!-- Heading added here -->
+        <h2>5 CH Universal Logger 2.0</h2>
+
+        <button onclick="clearData()">Clear Data</button>
+        <button onclick="pauseData()">Pause Data</button>
+        <button onclick="exportData()">Export Data</button>
+        <label for="filename">Filename:</label>
+        <input type="text" id="filename" placeholder="Enter filename">
+        <label for="dataLimit">Max Data Points:</label>
+        <input type="number" id="dataLimit" placeholder="Max Data Points" min="1" value="100">
+        <label for="samplingInterval">Sampling Interval (seconds):</label>
+        <input type="number" id="samplingInterval" placeholder="Sampling Interval" min="1" value="1">
+    </div>
+    <div class="main">
+        <div class="button-container">
+            <div class="sensor-group"><button id="btn1" onclick="connectPort(1)">Sensor 1</button><div id="container1"></div></div>
+            <div class="sensor-group"><button id="btn2" onclick="connectPort(2)">Sensor 2</button><div id="container2"></div></div>
+            <div class="sensor-group"><button id="btn3" onclick="connectPort(3)">Sensor 3</button><div id="container3"></div></div>
+            <div class="sensor-group"><button id="btn4" onclick="connectPort(4)">Sensor 4</button><div id="container4"></div></div>
+            <div class="sensor-group"><button id="btn5" onclick="connectPort(5)">Sensor 5</button><div id="container5"></div></div>
+        </div>
+    </div>
+    
+<script>
+        let ports = {};
+        let paused = false;
+        const sensorTypes = {
+            'A': { name: 'Force (N)' },
+            'B': { name: 'CO2 (ppm)' },
+            'C': { name: 'Temperature (C)' },
+            'D': { name: 'Magnetic Field (mT)' },
+            'E': { name: 'Relative Humidity (%)' },
+            'F': { name: 'CO2 (ppm)' },
+            'G': { name: 'Distance (mm)' },
+            'H': { name: 'Light level (Lux)' },
+            'I': { name: 'Geophone (ADC)' }
+
+        };
+
+        async function connectPort(portNumber) {
+            try {
+                const port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                ports[portNumber] = port;
+                document.getElementById(`btn${portNumber}`).classList.add("active");
+                readSerialData(port, portNumber);
+            } catch (error) {
+                console.error("Error opening port:", error);
+            }
+        }
+
+async function readSerialData(port, portNumber) {
+    const reader = port.readable.getReader();
+    let decoder = new TextDecoder();
+    let buffer = "";
+    let tableId = `table${portNumber}`;
+    let container = document.getElementById(`container${portNumber}`);
+    let dataLimit = parseInt(document.getElementById("dataLimit").value) || 100;
+
+    let table = document.createElement("table");
+    table.id = tableId;
+    table.innerHTML = `<thead><tr><th>Time (s)</th><th>Data</th></tr></thead><tbody></tbody>`;
+    container.innerHTML = "";
+    container.appendChild(table);
+
+    try {
+        while (true) {
+            if (paused) {
+                // Yield to the event loop to allow the UI to be responsive while paused
+                await new Promise(resolve => setTimeout(resolve, 100));
+                continue; // Skip the reading cycle if paused
+            }
+
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value);
+            let lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (let line of lines) {
+                let values = line.trim().split(',');
+                if (values.length === 3) {
+                    let time = (parseInt(values[0]) / 1000).toFixed(2);
+                    let sensorValue = parseFloat(values[1]).toFixed(2);
+                    let sensorType = values[2].trim();
+
+                    if (sensorTypes[sensorType]) {
+                        document.getElementById(`btn${portNumber}`).textContent = sensorTypes[sensorType].name;
+                        table.querySelector("thead tr").innerHTML = `<th>Time (s)</th><th>${sensorTypes[sensorType].name}</th>`;
+                        addToTable(table, time, sensorValue, dataLimit);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Read error:", error);
+    } finally {
+        reader.releaseLock();
+    }
+}
+
+
+
+        function addToTable(table, time, value, limit) {
+            if (paused) return;
+            let tbody = table.querySelector("tbody");
+            let row = tbody.insertRow(0);
+            row.innerHTML = `<td>${time}</td><td>${value}</td>`;
+            
+            while (tbody.rows.length > limit) {
+                tbody.deleteRow(-1);
+            }
+        }
+
+        function clearData() {
+    document.querySelectorAll("tbody").forEach(tbody => tbody.innerHTML = "");
+
+    // Send the sampling interval
+    let samplingInterval = document.getElementById("samplingInterval").value;
+    if (samplingInterval) {
+        sendSamplingInterval(`1,${samplingInterval}`);
+    }
+}
+
+// Function to send the sampling interval
+function sendSamplingInterval(data) {
+    Object.values(ports).forEach(port => {
+        const writer = port.writable.getWriter();
+        writer.write(new TextEncoder().encode(data + "\n"));
+        writer.releaseLock();
+    });
+}
+
+
+function pauseData() {
+    paused = !paused; // Correctly toggle the 'paused' variable
+    document.querySelector("button[onclick='pauseData()']").textContent = paused ? "Resume" : "Pause"; // Update button text
+}
+
+
+        function exportData() {
+            let csvContent = "";
+            let tables = document.querySelectorAll("table");
+            
+            let headers = [];
+            tables.forEach((table, index) => {
+                let headerText = table.querySelector("thead tr").innerText.replace(/\t/g, ",");
+                headers.push(headerText);
+            });
+            csvContent += headers.join(",") + "\n";
+            
+            let rows = Math.max(...Array.from(tables).map(t => t.querySelector("tbody").rows.length));
+            for (let i = 0; i < rows; i++) {
+                let rowData = [];
+                tables.forEach(table => {
+                    let row = table.querySelector("tbody").rows[i];
+                    if (row) {
+                        rowData.push(...Array.from(row.children).map(cell => cell.innerText));
+                    } else {
+                        rowData.push("", "");
+                    }
+                });
+                csvContent += rowData.join(",") + "\n";
+            }
+            
+            let filename = document.getElementById("filename").value || "exported_data";
+            let blob = new Blob([csvContent], { type: "text/csv" });
+            let link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename + ".csv";
+            link.click();
+        }
+    </script>
+</body>
+</html>
+
