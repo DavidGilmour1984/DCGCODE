@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Recorder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            background-color: #f4f4f4;
+            color: #000;
+            height: 100vh;
+            margin: 0;
+        }
+        .controls {
+            width: 20%;
+            padding: 20px;
+            background-color: #222;
+            border-right: 2px solid #444;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            color: white;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+        }
+        button {
+            font-size: 16px;
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+            transition: 0.3s;
+            color: white;
+            background-color: #555;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #777;
+        }
+        input {
+            width: 100%;
+            padding: 5px;
+            font-size: 14px;
+            background-color: #333;
+            color: #ddd;
+            border: 1px solid #555;
+            border-radius: 5px;
+            outline: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #333;
+        }
+        td {
+            padding: 10px;
+            color: #ddd;
+        }
+        .video-container {
+            width: 80%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        video {
+            width: 100%;
+            border: 2px solid black;
+            margin-bottom: 10px;
+        }
+        .recording-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: red;
+            color: white;
+            padding: 5px;
+            display: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h1>Webcam Recorder</h1>
+        <button id="recordButton">Record</button>
+        <table>
+            <tr>
+                <td>Frame Rate:</td>
+                <td id="videoInfo">N/A</td>
+            </tr>
+            <tr>
+                <td>Timer:</td>
+                <td id="timer">0.0s</td>
+            </tr>
+            <tr>
+                <td>File Name:</td>
+                <td><input type="text" id="fileName" placeholder="Enter file name"></td>
+            </tr>
+        </table>
+    </div>
+    <div class="video-container">
+        <div class="recording-indicator" id="recordingIndicator">● Recording</div>
+        <video id="video" autoplay></video>
+    </div>
+</body>
+</html>
+
+    <script>
+        let video = document.getElementById('video');
+        let recordButton = document.getElementById('recordButton');
+        let timerDisplay = document.getElementById('timer');
+        let fileNameInput = document.getElementById('fileName');
+        let videoInfo = document.getElementById('videoInfo');
+        let recordingIndicator = document.getElementById('recordingIndicator');
+        let mediaRecorder;
+        let recordedChunks = [];
+        let timer;
+        let startTime;
+        let frameRate;
+
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(stream => {
+                video.srcObject = stream;
+                mediaRecorder = new MediaRecorder(stream);
+                frameRate = stream.getVideoTracks()[0].getSettings().frameRate;
+                videoInfo.innerText = `${frameRate} FPS`;
+
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    let fileName = fileNameInput.value || 'recorded-video';
+                    let blob = new Blob(recordedChunks, { type: 'video/mp4' });
+                    let url = URL.createObjectURL(blob);
+                    // Directly download the file without preview
+                    let a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName + '.mp4';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                };
+            })
+            .catch(error => console.error('Error accessing webcam:', error));
+
+        recordButton.addEventListener('click', () => {
+            if (recordButton.innerText === 'Record') {
+                recordedChunks = [];
+                mediaRecorder.start();
+                recordButton.innerText = 'Save';
+                startTime = Date.now();
+                recordingIndicator.style.display = 'block';
+                timer = setInterval(() => {
+                    let elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
+                    timerDisplay.innerText = `${elapsedTime}s`;
+                }, 100);
+            } else {
+                mediaRecorder.stop();
+                recordButton.innerText = 'Record';
+                recordingIndicator.style.display = 'none';
+                clearInterval(timer);
+            }
+        });
+    </script>
+</body>
+</html>
