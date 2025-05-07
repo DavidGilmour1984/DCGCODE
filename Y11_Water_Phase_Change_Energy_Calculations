@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Phase Change Energy Quiz</title>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      padding: 2em;
+      background-color: #f5f5f5;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 800px;
+      margin: auto;
+    }
+    input {
+      padding: 0.6em;
+      font-size: 1rem;
+      margin: 0.5em;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      margin-top: 1em;
+      padding: 0.8em 1.6em;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #result, #working, #score {
+      margin-top: 1em;
+      font-weight: bold;
+      white-space: pre-line;
+      text-align: left;
+    }
+    .info-list {
+      text-align: left;
+      margin-top: 2em;
+      font-weight: normal;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .info-list ul {
+      padding-left: 2em;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Energy Required for Phase Change</h2>
+    <p id="question"></p>
+    <input id="userAnswer" type="number" placeholder="Energy (J)">
+    <br>
+    <button onclick="submitAnswer()">Submit Answer</button>
+    <button onclick="generateQuestion()">New Question</button>
+    <button onclick="showWorking()">Show Working</button>
+    <div id="result"></div>
+    <div id="working"></div>
+   
+
+    <div class="info-list">
+      <h3>Formulas</h3>
+      <ul>
+        <li>Heating/Cooling Energy: Q = m × c × ΔT</li>
+        <li>Latent Heat: Q = m × L</li>
+      </ul>
+      <h3>Thermal Properties</h3>
+      <ul>
+        <li>Specific Heat Capacity of Ice: 2100 J/kg°C</li>
+        <li>Specific Heat Capacity of Water: 4186 J/kg°C</li>
+        <li>Specific Heat Capacity of Steam: 2000 J/kg°C</li>
+        <li>Latent Heat of Fusion (melting/freezing): 334000 J/kg</li>
+        <li>Latent Heat of Vaporization (boiling/condensation): 2260000 J/kg</li>
+      </ul>
+    </div>
+     <div id="score"></div>
+  </div>
+
+  <script>
+    const cIce = 2100;
+    const cWater = 4186;
+    const cSteam = 2000;
+    const Lf = 334000;
+    const Lv = 2260000;
+
+    let currentAnswer = 0;
+    let currentWorking = "";
+    let hasViewedWorking = false;
+    let totalQuestions = 0;
+    let score = 0;
+
+    function updateScoreDisplay() {
+      document.getElementById("score").innerText = `Score: ${score}/${totalQuestions}`;
+    }
+
+    function generateQuestion() {
+      const mass = (Math.floor(Math.random() * 400 + 100)) / 1000;
+      const states = ["solid", "liquid", "gas"];
+      const fromState = states[Math.floor(Math.random() * 3)];
+      let toState = states[Math.floor(Math.random() * 3)];
+      while (toState === fromState) toState = states[Math.floor(Math.random() * 3)];
+
+      const temps = {
+        solid: Math.floor(Math.random() * 30 - 20),
+        liquid: Math.floor(Math.random() * 60 + 10),
+        gas: Math.floor(Math.random() * 100 + 100)
+      };
+
+      const startTemp = temps[fromState];
+      const endTemp = temps[toState];
+
+      let energy = 0;
+      let steps = `Calculations:\n`;
+
+      function addEnergy(q) {
+        energy += Math.abs(q);
+        return Math.abs(q);
+      }
+
+      if (fromState === "solid" && toState === "liquid") {
+        steps += `1. Heat ice to 0°C: Q = m × c × ΔT  ⇒ Q = ${mass} × ${cIce} × ${0 - startTemp} = ${addEnergy(mass * cIce * (0 - startTemp)).toFixed(2)} J\n`;
+        steps += `2. Melt ice: Q = m × L  ⇒ Q = ${mass} × ${Lf} = ${addEnergy(mass * Lf).toFixed(2)} J\n`;
+        steps += `3. Heat water: Q = m × c × ΔT  ⇒ Q = ${mass} × ${cWater} × ${endTemp} = ${addEnergy(mass * cWater * endTemp).toFixed(2)} J\n`;
+
+      } else if (fromState === "liquid" && toState === "gas") {
+        steps += `1. Heat water to 100°C: Q = m × c × ΔT  ⇒ Q = ${mass} × ${cWater} × ${100 - startTemp} = ${addEnergy(mass * cWater * (100 - startTemp)).toFixed(2)} J\n`;
+        steps += `2. Vaporize water: Q = m × L  ⇒ Q = ${mass} × ${Lv} = ${addEnergy(mass * Lv).toFixed(2)} J\n`;
+        steps += `3. Heat steam: Q = m × c × ΔT  ⇒ Q = ${mass} × ${cSteam} × ${endTemp - 100} = ${addEnergy(mass * cSteam * (endTemp - 100)).toFixed(2)} J\n`;
+
+      } else if (fromState === "solid" && toState === "gas") {
+        steps += `1. Heat ice to 0°C: Q = m × c × ΔT  ⇒ Q = ${mass} × ${cIce} × ${0 - startTemp} = ${addEnergy(mass * cIce * (0 - startTemp)).toFixed(2)} J\n`;
+        steps += `2. Melt ice: Q = m × L  ⇒ Q = ${mass} × ${Lf} = ${addEnergy(mass * Lf).toFixed(2)} J\n`;
+        steps += `3. Heat water to 100°C: Q = m × c × ΔT  ⇒ Q = ${mass} × ${cWater} × 100 = ${addEnergy(mass * cWater * 100).toFixed(2)} J\n`;
+        steps += `4. Vaporize water: Q = m × L  ⇒ Q = ${mass} × ${Lv} = ${addEnergy(mass * Lv).toFixed(2)} J\n`;
+        steps += `5. Heat steam: Q = m × c × ΔT  ⇒ Q = ${mass} × ${cSteam} × ${endTemp - 100} = ${addEnergy(mass * cSteam * (endTemp - 100)).toFixed(2)} J\n`;
+
+      } else if (fromState === "liquid" && toState === "solid") {
+        steps += `1. Cool water to 0°C: Q = m × c × ΔT  ⇒ Q = ${mass} × ${cWater} × ${0 - startTemp} = ${addEnergy(mass * cWater * (0 - startTemp)).toFixed(2)} J\n`;
+        steps += `2. Freeze water: Q = m × L  ⇒ Q = ${mass} × ${Lf} = ${addEnergy(mass * Lf).toFixed(2)} J\n`;
+        steps += `3. Cool ice: Q = m × c × ΔT  ⇒ Q = ${mass} × ${cIce} × ${endTemp} = ${addEnergy(mass * cIce * endTemp).toFixed(2)} J\n`;
+
+      } else if (fromState === "gas" && toState === "liquid") {
+        steps += `1. Cool steam to 100°C: Q = m × c × ΔT  ⇒ Q = ${mass} × ${cSteam} × ${100 - startTemp} = ${addEnergy(mass * cSteam * (100 - startTemp)).toFixed(2)} J\n`;
+        steps += `2. Condense steam: Q = m × L  ⇒ Q = ${mass} × ${Lv} = ${addEnergy(mass * Lv).toFixed(2)} J\n`;
+        steps += `3. Cool water: Q = m × c × ΔT  ⇒ Q = ${mass} × ${cWater} × ${endTemp - 100} = ${addEnergy(mass * cWater * (endTemp - 100)).toFixed(2)} J\n`;
+
+      } else if (fromState === "gas" && toState === "solid") {
+        steps += `1. Cool steam to 100°C: Q = m × c × ΔT  ⇒ Q = ${mass} × ${cSteam} × ${100 - startTemp} = ${addEnergy(mass * cSteam * (100 - startTemp)).toFixed(2)} J\n`;
+        steps += `2. Condense steam: Q = m × L  ⇒ Q = ${mass} × ${Lv} = ${addEnergy(mass * Lv).toFixed(2)} J\n`;
+        steps += `3. Cool water to 0°C: Q = m × c × ΔT  ⇒ Q = ${mass} × ${cWater} × -100 = ${addEnergy(mass * cWater * -100).toFixed(2)} J\n`;
+        steps += `4. Freeze water: Q = m × L  ⇒ Q = ${mass} × ${Lf} = ${addEnergy(mass * Lf).toFixed(2)} J\n`;
+        steps += `5. Cool ice: Q = m × c × ΔT  ⇒ Q = ${mass} × ${cIce} × ${endTemp} = ${addEnergy(mass * cIce * endTemp).toFixed(2)} J\n`;
+      } else {
+        steps += `Transformation not implemented yet.\n`;
+      }
+
+      currentAnswer = energy;
+      currentWorking = steps + `\nTotal energy required: ${energy.toFixed(2)} J`;
+
+      document.getElementById("question").innerText = `Calculate the energy required to change ${mass} kg of water from ${fromState} at ${startTemp}°C to ${toState} at ${endTemp}°C.`;
+      document.getElementById("result").innerText = "";
+      document.getElementById("working").innerText = "";
+      document.getElementById("userAnswer").value = "";
+      hasViewedWorking = false;
+    }
+
+    function submitAnswer() {
+      const userInput = parseFloat(document.getElementById("userAnswer").value);
+      if (isNaN(userInput)) {
+        alert("Please enter a number.");
+        return;
+      }
+      totalQuestions++;
+      const error = Math.abs(parseFloat(userInput.toFixed(2)) - parseFloat(currentAnswer.toFixed(2)));
+      const isCorrect = error < 500;
+      if (isCorrect && !hasViewedWorking) score++;
+      if (!isCorrect) document.getElementById("working").innerText = currentWorking;
+      document.getElementById("result").innerText = isCorrect ? "✅ Correct!" : `❌ Incorrect. The correct answer is ${currentAnswer.toFixed(2)} J.`;
+      if (!isCorrect) {
+        document.getElementById("working").innerText = currentWorking;
+      }
+      updateScoreDisplay();
+    }
+
+    function showWorking() {
+      hasViewedWorking = true;
+      document.getElementById("working").innerText = currentWorking;
+    }
+
+    generateQuestion();
+  </script>
+</body>
+</html>
