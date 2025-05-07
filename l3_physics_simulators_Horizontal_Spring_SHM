@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Harmonic Motion: Horizontal Spring</title>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      background-color: #f5f5f5;
+      padding: 0.5em;
+      text-align: center;
+    }
+
+    .card {
+      background: white;
+      padding: 1.5em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 1400px; /* Increased width */
+      margin: auto;
+    }
+
+    canvas {
+      background-color: #ffffff;
+      border: 1px solid #ccc;
+      margin: 0.5em;
+      border-radius: 12px;
+      width: 100%; /* Make canvas width flexible */
+    }
+
+    label {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+
+    input[type="number"] {
+      width: 80px;
+      padding: 0.4em;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+
+    button {
+      margin-top: 1em;
+      padding: 0.5em 1.6em;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #28a745;
+      color: white;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+
+    .flex-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .flex-row {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: nowrap;
+    }
+
+    .phasor-stack {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 2em;
+      margin-top: 1em;
+    }
+
+    .phasor-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .value-display {
+      margin-top: 0.5em;
+      font-weight: bold;
+      text-align: center;
+      min-width: 120px;
+    }
+
+    .spring-stats {
+      display: flex;
+      justify-content: center;
+      gap: 2em;
+      font-size: 1rem;
+      font-weight: bold;
+      margin-bottom: 1em;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Simple Harmonic Motion: Horizontal Spring</h2>
+    <label for="massInput">Mass (kg):</label>
+    <input type="number" id="massInput" value="10" step="0.1" min="0.1">
+    <label for="kInput">Spring Constant (Nm⁻¹):</label>
+    <input type="number" id="kInput" value="10" step="0.1" min="0.1">
+    <label for="displacementInput">Amplitude (m):</label>
+    <input type="number" id="displacementInput" value="1" step="0.01" min="0">
+
+    <button id="pauseBtn" onclick="togglePause()">Pause</button>
+
+    <br><br>
+
+    <div class="spring-stats">
+      <div id="periodValue">Period: 0.00 s</div>
+      <div id="angularVelocityValue">Angular Velocity: 0.00 rad s<sup>−1</sup></div>
+    </div>
+
+    <div class="flex-column">
+      <canvas id="springCanvas" width="1000" height="200"></canvas>
+
+      <div class="phasor-stack">
+        <div class="phasor-container">
+          <canvas id="phasorDisplacement" width="100" height="100"></canvas>
+          <div class="value-display" id="dispValue">x = 0.00 m</div>
+        </div>
+
+        <div class="phasor-container">
+          <canvas id="phasorVelocity" width="100" height="100"></canvas>
+          <div class="value-display" id="velValue">v = 0.00 m·s⁻¹</div>
+        </div>
+
+        <div class="phasor-container">
+          <canvas id="phasorAcceleration" width="100" height="100"></canvas>
+          <div class="value-display" id="accValue">a = 0.00 m/s²</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+<script>
+  let mass = 10;
+  let k = 10;
+  let displacement = 1;
+  let velocity = 0;
+  let time = 0;
+  let dt = 0.02;
+  let isPaused = false;
+
+  const canvas = document.getElementById("springCanvas");
+  const ctx = canvas.getContext("2d");
+
+  const dispCtx = document.getElementById("phasorDisplacement").getContext("2d");
+  const velCtx = document.getElementById("phasorVelocity").getContext("2d");
+  const accCtx = document.getElementById("phasorAcceleration").getContext("2d");
+
+  function updatePhysics() {
+    const acceleration = -(k / mass) * displacement;
+    velocity += acceleration * dt;
+    displacement += velocity * dt;
+    time += dt;
+  }
+
+  function drawCoilSpring(startX, endX, y, coils = 8, amplitude = 10) {
+    const dx = (endX - startX) / (coils * 2);
+    ctx.beginPath();
+    ctx.moveTo(startX, y);
+    for (let i = 0; i < coils * 2; i++) {
+      const x = startX + dx * i;
+      const dy = (i % 2 === 0) ? amplitude : -amplitude;
+      ctx.lineTo(x + dx, y + dy);
+    }
+    ctx.lineTo(endX, y);
+    ctx.strokeStyle = "#444";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+
+  // Function to draw ruler
+  function drawRuler() {
+  const rulerY = canvas.height - 40; // Move the ruler higher up
+  const startX = 70;
+  const endX = canvas.width - 70;
+  const step = 0.5; // 0.5m increments
+  const scale = 100; // pixels per meter
+
+  ctx.beginPath();
+  ctx.moveTo(startX, rulerY);
+  ctx.lineTo(endX, rulerY);
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // Draw tick marks and numbers
+  for (let i = -7; i <= 7; i++) { // Adjusted to go from -3.5 to 3.5
+    const tickX = canvas.width / 2 + i * scale * step;
+    ctx.moveTo(tickX, rulerY - 5);
+    ctx.lineTo(tickX, rulerY + 5);
+    ctx.stroke();
+
+    // Draw numbers for displacement
+    const number = i * step; // Convert tick position to displacement value
+    ctx.fillStyle = "#000";
+    ctx.font = "14px Helvetica";
+    ctx.fillText(number.toFixed(1), tickX - 10, rulerY + 20); // Adjust the positioning of the number
+  }
+}
+
+  function drawSpring() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const centerY = canvas.height / 2;
+    const baseX = canvas.width / 2;
+    const scale = 100;
+    const maxStretch = 1;
+    const currentX = baseX + displacement * scale;
+
+    // Draw the ruler
+    drawRuler();
+
+    // Draw spring coil
+    drawCoilSpring(0, currentX, centerY);
+
+    // Draw block
+    ctx.fillStyle = "#007bff";
+    ctx.fillRect(currentX, centerY - 25, 50, 50);
+  }
+
+  function drawPhasor(ctx, angle, color) {
+    const centerX = ctx.canvas.width / 2;
+    const centerY = ctx.canvas.height / 2;
+    const radius = 40;
+    const x = centerX + radius * Math.cos(-angle);
+    const y = centerY + radius * Math.sin(-angle);
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    ctx.strokeStyle = '#ccc';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(x, y);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  function updateStats() {
+    const period = 2 * Math.PI * Math.sqrt(mass / k);
+    const omega = Math.sqrt(k / mass);
+    document.getElementById("periodValue").innerText = `Period: ${period.toFixed(2)} s`;
+    document.getElementById("angularVelocityValue").innerText = `Angular Velocity: ${omega.toFixed(2)} rads⁻¹`;
+  }
+
+  function resetSimulation() {
+    mass = parseFloat(document.getElementById("massInput").value);
+    k = parseFloat(document.getElementById("kInput").value);
+    displacement = parseFloat(document.getElementById("displacementInput").value);
+    velocity = 0;
+    time = 0;
+    drawSpring();
+    drawPhasor(dispCtx, 0, "#007bff");
+    drawPhasor(velCtx, Math.PI / 2, "#ffc107");
+    drawPhasor(accCtx, Math.PI, "#dc3545");
+    updateStats();
+  }
+
+  function togglePause() {
+    isPaused = !isPaused;
+    document.getElementById("pauseBtn").textContent = isPaused ? "Resume" : "Pause";
+  }
+
+  function animate() {
+    if (!isPaused) {
+      updatePhysics();
+      drawSpring();
+
+      const omega_phasor = Math.sqrt(k / mass);
+      const angle = omega_phasor * time;
+      drawPhasor(dispCtx, angle, "#007bff");
+      drawPhasor(velCtx, angle + Math.PI / 2, "#ffc107");
+      drawPhasor(accCtx, angle + Math.PI, "#dc3545");
+
+      const acceleration = -(k / mass) * displacement;
+      document.getElementById("dispValue").innerText = `x = ${displacement.toFixed(2)} m`;
+      document.getElementById("velValue").innerText = `v = ${velocity.toFixed(2)} ms⁻¹`;
+      document.getElementById("accValue").innerText = `a = ${acceleration.toFixed(2)} m⁻²`;
+    }
+    requestAnimationFrame(animate);
+  }
+
+  document.getElementById("massInput").addEventListener("change", resetSimulation);
+  document.getElementById("kInput").addEventListener("change", resetSimulation);
+  document.getElementById("displacementInput").addEventListener("change", resetSimulation);
+
+  resetSimulation();
+  animate();
+</script>
+</body>
+</html>
