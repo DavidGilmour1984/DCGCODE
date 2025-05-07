@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Decay Revision Quiz</title>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      padding: 2em;
+      background-color: #f5f5f5;
+      text-align: center;
+    }
+
+    .card {
+      background: white;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 700px;
+      margin: auto;
+    }
+
+    .question {
+      display: none;
+    }
+
+    .question.active {
+      display: block;
+    }
+
+    .blank {
+      display: inline-block;
+      width: 120px;
+      border-bottom: 2px dashed #999;
+      margin: 0 5px;
+      min-height: 25px;
+      vertical-align: middle;
+      background-color: #f0f0f0;
+      padding: 4px 6px;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+
+    .controls {
+      margin-top: 20px;
+    }
+
+    button {
+      margin-top: 1em;
+      padding: 0.8em 1.6em;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #feedback {
+      margin-top: 1em;
+      font-weight: bold;
+      color: #444;
+    }
+
+    #progress {
+      margin-top: 20px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #444;
+    }
+
+    #decay-text {
+      font-size: 2rem;
+    }
+
+    .nucleus {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 1rem;
+    }
+
+    .symbol {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+
+    .atomic-number {
+      font-size: 0.7rem;
+      position: relative;
+      top: -5px;
+      right: 20px;
+    }
+
+    .mass-number {
+      font-size: 0.7rem;
+      position: relative;
+      top: 5px;
+      right: 20px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .selected {
+      background-color: #c1e1c1;
+    }
+
+    .arrow {
+      font-size: 2rem;
+      vertical-align: -30px;
+      margin: 0 5px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div id="question-area">
+    <div id="decay-question" class="question active">
+      <p id="decay-text"></p>
+
+      <div id="input-area" class="hidden">
+        <div id="decay-path"></div>
+      </div>
+
+      <div id="choice-area" class="hidden">
+        <button onclick="selectAnswer('alpha')">Alpha Decay</button>
+        <button onclick="selectAnswer('beta')">Beta Decay</button>
+        <button onclick="selectAnswer('gamma')">Gamma Decay</button>
+      </div>
+
+      <div class="controls">
+        <button onclick="submitAnswer()">Submit</button>
+        <button onclick="revealAnswer()">Check Answer</button>
+      </div>
+
+      <div id="feedback"></div>
+      <div id="progress"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let correctCount = 0;
+let attemptedCount = 0;
+let selectedAnswer = "";
+let hasRevealed = false;
+let current = null;
+
+
+const isotopes = [
+      { symbol: "U", mass: 238, number: 92, decay: "alpha", product: { symbol: "Th", mass: 234, number: 90 } },
+      { symbol: "U", mass: 235, number: 92, decay: "alpha", product: { symbol: "Th", mass: 231, number: 90 } },
+      { symbol: "U", mass: 234, number: 92, decay: "alpha", product: { symbol: "Th", mass: 230, number: 90 } },
+      { symbol: "Th", mass: 232, number: 90, decay: "alpha", product: { symbol: "Ra", mass: 228, number: 88 } },
+      { symbol: "Th", mass: 230, number: 90, decay: "alpha", product: { symbol: "Ra", mass: 226, number: 88 } },
+      { symbol: "Ra", mass: 226, number: 88, decay: "alpha", product: { symbol: "Rn", mass: 222, number: 86 } },
+      { symbol: "Ra", mass: 224, number: 88, decay: "alpha", product: { symbol: "Rn", mass: 220, number: 86 } },
+      { symbol: "Ra", mass: 228, number: 88, decay: "beta", product: { symbol: "Ac", mass: 228, number: 89 } },
+      { symbol: "Rn", mass: 222, number: 86, decay: "alpha", product: { symbol: "Po", mass: 218, number: 84 } },
+      { symbol: "Rn", mass: 220, number: 86, decay: "alpha", product: { symbol: "Po", mass: 216, number: 84 } },
+      { symbol: "Po", mass: 218, number: 84, decay: "alpha", product: { symbol: "Pb", mass: 214, number: 82 } },
+      { symbol: "Po", mass: 210, number: 84, decay: "alpha", product: { symbol: "Pb", mass: 206, number: 82 } },
+      { symbol: "Pb", mass: 210, number: 82, decay: "beta", product: { symbol: "Bi", mass: 210, number: 83 } },
+      { symbol: "Pb", mass: 214, number: 82, decay: "beta", product: { symbol: "Bi", mass: 214, number: 83 } },
+      { symbol: "Bi", mass: 212, number: 83, decay: "alpha", product: { symbol: "Tl", mass: 208, number: 81 } },
+      { symbol: "Bi", mass: 210, number: 83, decay: "beta", product: { symbol: "Po", mass: 210, number: 84 } },
+      { symbol: "Ac", mass: 227, number: 89, decay: "beta", product: { symbol: "Th", mass: 227, number: 90 } },
+      { symbol: "Fr", mass: 223, number: 87, decay: "beta", product: { symbol: "Ra", mass: 223, number: 88 } },
+      { symbol: "C", mass: 14, number: 6, decay: "beta", product: { symbol: "N", mass: 14, number: 7 } },
+      { symbol: "K", mass: 40, number: 19, decay: "beta", product: { symbol: "Ca", mass: 40, number: 20 } },
+      { symbol: "Rb", mass: 87, number: 37, decay: "beta", product: { symbol: "Sr", mass: 87, number: 38 } },
+      { symbol: "Sm", mass: 147, number: 62, decay: "alpha", product: { symbol: "Nd", mass: 143, number: 60 } },
+      { symbol: "Lu", mass: 176, number: 71, decay: "beta", product: { symbol: "Hf", mass: 176, number: 72 } },
+      { symbol: "In", mass: 115, number: 49, decay: "beta", product: { symbol: "Sn", mass: 115, number: 50 } },
+      { symbol: "Te", mass: 128, number: 52, decay: "beta", product: { symbol: "Xe", mass: 128, number: 54 } },
+      { symbol: "Te", mass: 130, number: 52, decay: "beta", product: { symbol: "Xe", mass: 130, number: 54 } },
+      { symbol: "Np", mass: 237, number: 93, decay: "alpha", product: { symbol: "Pa", mass: 233, number: 91 } },
+      { symbol: "Pa", mass: 231, number: 91, decay: "alpha", product: { symbol: "Ac", mass: 227, number: 89 } },
+      { symbol: "Pa", mass: 233, number: 91, decay: "beta", product: { symbol: "U", mass: 233, number: 92 } },
+      { symbol: "Th", mass: 229, number: 90, decay: "alpha", product: { symbol: "Ra", mass: 225, number: 88 } },
+      { symbol: "Ra", mass: 223, number: 88, decay: "alpha", product: { symbol: "Rn", mass: 219, number: 86 } },
+      { symbol: "Rn", mass: 219, number: 86, decay: "alpha", product: { symbol: "Po", mass: 215, number: 84 } },
+      { symbol: "Po", mass: 215, number: 84, decay: "alpha", product: { symbol: "Pb", mass: 211, number: 82 } },
+      { symbol: "Pb", mass: 211, number: 82, decay: "beta", product: { symbol: "Bi", mass: 211, number: 83 } },
+      { symbol: "Bi", mass: 211, number: 83, decay: "alpha", product: { symbol: "Tl", mass: 207, number: 81 } },
+      { symbol: "Tl", mass: 208, number: 81, decay: "beta", product: { symbol: "Pb", mass: 208, number: 82 } },
+      { symbol: "Ra", mass: 225, number: 88, decay: "beta", product: { symbol: "Ac", mass: 225, number: 89 } },
+      { symbol: "Ac", mass: 225, number: 89, decay: "alpha", product: { symbol: "Fr", mass: 221, number: 87 } },
+      { symbol: "Fr", mass: 221, number: 87, decay: "alpha", product: { symbol: "At", mass: 217, number: 85 } },
+      { symbol: "At", mass: 217, number: 85, decay: "alpha", product: { symbol: "Bi", mass: 213, number: 83 } },
+      { symbol: "Bi", mass: 213, number: 83, decay: "beta", product: { symbol: "Po", mass: 213, number: 84 } },
+      { symbol: "Po", mass: 213, number: 84, decay: "alpha", product: { symbol: "Pb", mass: 209, number: 82 } },
+      { symbol: "Pb", mass: 209, number: 82, decay: "beta", product: { symbol: "Bi", mass: 209, number: 83 } },
+      { symbol: "Bi", mass: 209, number: 83, decay: "alpha", product: { symbol: "Tl", mass: 205, number: 81 } },
+      { symbol: "Tl", mass: 204, number: 81, decay: "beta", product: { symbol: "Pb", mass: 204, number: 82 } },
+      { symbol: "Nd", mass: 144, number: 60, decay: "alpha", product: { symbol: "Ce", mass: 140, number: 58 } },
+      { symbol: "La", mass: 138, number: 57, decay: "beta", product: { symbol: "Ce", mass: 138, number: 58 } },
+      { symbol: "Re", mass: 187, number: 75, decay: "beta", product: { symbol: "Os", mass: 187, number: 76 } },
+      { symbol: "Os", mass: 186, number: 76, decay: "alpha", product: { symbol: "W", mass: 182, number: 74 } },
+      { symbol: "W", mass: 180, number: 74, decay: "beta", product: { symbol: "Re", mass: 180, number: 75 } },
+      { symbol: "Se", mass: 82, number: 34, decay: "beta", product: { symbol: "Br", mass: 82, number: 35 } },
+      { symbol: "Yb", mass: 176, number: 70, decay: "beta", product: { symbol: "Lu", mass: 176, number: 71 } },
+      { symbol: "Pb", mass: 202, number: 82, decay: "beta", product: { symbol: "Bi", mass: 202, number: 83 } },
+      { symbol: "Tm", mass: 169, number: 69, decay: "beta", product: { symbol: "Yb", mass: 169, number: 70 } },
+      { symbol: "Nd", mass: 150, number: 60, decay: "beta", product: { symbol: "Pm", mass: 150, number: 61 } },
+      { symbol: "Ho", mass: 163, number: 67, decay: "beta", product: { symbol: "Dy", mass: 163, number: 66 } },
+      { symbol: "Er", mass: 169, number: 68, decay: "beta", product: { symbol: "Tm", mass: 169, number: 69 } },
+      { symbol: "Y", mass: 90, number: 39, decay: "beta", product: { symbol: "Zr", mass: 90, number: 40 } },
+      { symbol: "Zr", mass: 93, number: 40, decay: "beta", product: { symbol: "Nb", mass: 93, number: 41 } },
+      { symbol: "Am", mass: 241, number: 95, decay: "alpha", product: { symbol: "Np", mass: 237, number: 93 } },
+      { symbol: "Cm", mass: 244, number: 96, decay: "alpha", product: { symbol: "Pu", mass: 240, number: 94 } },
+      { symbol: "Pu", mass: 239, number: 94, decay: "alpha", product: { symbol: "U", mass: 235, number: 92 } },
+      { symbol: "Bk", mass: 247, number: 97, decay: "alpha", product: { symbol: "Am", mass: 243, number: 95 } },
+      { symbol: "Cf", mass: 251, number: 98, decay: "alpha", product: { symbol: "Cm", mass: 247, number: 96 } },
+      { symbol: "Es", mass: 252, number: 99, decay: "beta", product: { symbol: "Fm", mass: 252, number: 100 } },
+      { symbol: "Fm", mass: 257, number: 100, decay: "alpha", product: { symbol: "Cf", mass: 253, number: 98 } },
+      { symbol: "No", mass: 259, number: 102, decay: "alpha", product: { symbol: "Fm", mass: 255, number: 100 } },
+      { symbol: "Md", mass: 258, number: 101, decay: "beta", product: { symbol: "No", mass: 258, number: 102 } },
+      { symbol: "U", mass: 236, number: 92, decay: "alpha", product: { symbol: "Th", mass: 232, number: 90 } },
+      { symbol: "Ra", mass: 226, number: 88, decay: "alpha", product: { symbol: "Rn", mass: 222, number: 86 } },
+      { symbol: "At", mass: 219, number: 85, decay: "alpha", product: { symbol: "Bi", mass: 215, number: 83 } },
+      { symbol: "Np", mass: 239, number: 93, decay: "beta", product: { symbol: "Pu", mass: 239, number: 94 } },
+      { symbol: "Pu", mass: 241, number: 94, decay: "beta", product: { symbol: "Am", mass: 241, number: 95 } },
+      { symbol: "Sb", mass: 124, number: 51, decay: "beta", product: { symbol: "Te", mass: 124, number: 52 } },
+      { symbol: "Cs", mass: 137, number: 55, decay: "beta", product: { symbol: "Ba", mass: 137, number: 56 } },
+      { symbol: "Ba", mass: 140, number: 56, decay: "beta", product: { symbol: "La", mass: 140, number: 57 } },
+      { symbol: "Sr", mass: 90, number: 38, decay: "beta", product: { symbol: "Y", mass: 90, number: 39 } },
+      { symbol: "Kr", mass: 85, number: 36, decay: "beta", product: { symbol: "Rb", mass: 85, number: 37 } },
+      { symbol: "I", mass: 131, number: 53, decay: "beta", product: { symbol: "Xe", mass: 131, number: 54 } },
+      { symbol: "Xe", mass: 133, number: 54, decay: "beta", product: { symbol: "Cs", mass: 133, number: 55 } },
+      { symbol: "Mo", mass: 99, number: 42, decay: "beta", product: { symbol: "Tc", mass: 99, number: 43 } },
+      { symbol: "Tc", mass: 99, number: 43, decay: "beta", product: { symbol: "Ru", mass: 99, number: 44 } },
+      { symbol: "Co", mass: 60, number: 27, decay: "beta", product: { symbol: "Ni", mass: 60, number: 28 } },
+      { symbol: "Ir", mass: 192, number: 77, decay: "beta", product: { symbol: "Pt", mass: 192, number: 78 } },
+      { symbol: "Hg", mass: 194, number: 80, decay: "beta", product: { symbol: "Tl", mass: 194, number: 81 } },
+      { symbol: "Ag", mass: 111, number: 47, decay: "beta", product: { symbol: "Cd", mass: 111, number: 48 } },
+      { symbol: "Zn", mass: 65, number: 30, decay: "beta", product: { symbol: "Cu", mass: 65, number: 29 } },
+      { symbol: "Mn", mass: 56, number: 25, decay: "beta", product: { symbol: "Fe", mass: 56, number: 26 } },
+      { symbol: "Fe", mass: 59, number: 26, decay: "beta", product: { symbol: "Co", mass: 59, number: 27 } }
+
+
+];
+
+function getRandomQuestion() {
+  const iso = isotopes[Math.floor(Math.random() * isotopes.length)];
+  const isType = Math.random() < 0.5;
+
+  if (isType) {
+    return {
+      type: "decayType",
+      start: { symbol: iso.symbol, mass: iso.mass, number: iso.number },
+      end: { symbol: iso.product.symbol, mass: iso.product.mass, number: iso.product.number },
+      correctAnswer: iso.decay
+    };
+  } else {
+    return {
+      type: "decayResult",
+      start: { symbol: iso.symbol, mass: iso.mass, number: iso.number },
+      decay: iso.decay,
+      correctSymbol: iso.product.symbol,
+      correctMass: iso.product.mass,
+      correctNumber: iso.product.number
+    };
+  }
+}
+
+function loadQuestion() {
+  hasRevealed = false;
+  selectedAnswer = "";
+  current = getRandomQuestion();
+
+  document.getElementById('feedback').innerHTML = '';
+  const decayText = document.getElementById('decay-text');
+  const inputArea = document.getElementById('input-area');
+  const choiceArea = document.getElementById('choice-area');
+  const decayPath = document.getElementById('decay-path');
+
+  if (current.type === "decayType") {
+    decayText.innerHTML = `${formatNucleus(current.start)} <span class="arrow">→</span> ${formatNucleus(current.end)}`;
+    inputArea.classList.add('hidden');
+    choiceArea.classList.remove('hidden');
+  } else {
+    let particle = current.decay === "alpha" ? formatNucleus({symbol: "α", mass: 4, number: 2})
+                 : current.decay === "beta" ? formatNucleus({symbol: "β", mass: 0, number: -1})
+                 : formatNucleus({symbol: "γ", mass: 0, number: 0});
+
+    decayText.innerHTML = "Complete the decay:";
+    decayPath.innerHTML = `${formatNucleus(current.start)} <span class="arrow"> → </span> ${particle} <span class="arrow">+</span> 
+      <span class="nucleus">
+        <sup><input type="number" id="mass-number" style="width:50px;text-align:center; font-size:0.8rem;"></sup>
+        <input type="text" id="element-symbol" style="width:60px;text-align:center; font-size:1.2rem;">
+        <sub><input type="number" id="atomic-number" style="width:50px;text-align:center; font-size:0.8rem;"></sub>
+      </span>`;
+
+    inputArea.classList.remove('hidden');
+    choiceArea.classList.add('hidden');
+  }
+
+  updateProgress();
+}
+
+function formatNucleus(nucleus) {
+  return `<span class="nucleus">
+            <sub class="atomic-number">${nucleus.mass}</sub>
+            <span class="symbol">${nucleus.symbol}</span>
+            <sup class="mass-number">${nucleus.number}</sup>
+          </span>`;
+}
+
+function updateProgress() {
+  document.getElementById('progress').innerText = `Score: ${correctCount}/${attemptedCount}`;
+}
+
+function selectAnswer(answer) {
+  selectedAnswer = answer;
+  const buttons = document.querySelectorAll('button');
+  buttons.forEach(button => button.classList.remove('selected'));
+  document.querySelector(`button[onclick="selectAnswer('${answer}')"]`).classList.add('selected');
+}
+
+function revealAnswer() {
+  hasRevealed = true;
+  let feedback = "";
+
+  if (current.type === "decayType") {
+    feedback = `🧪 Answer:&nbsp;&nbsp;&nbsp;${capitalize(current.correctAnswer)} decay.`;
+  } else {
+    feedback = `🧪 Answer:&nbsp;&nbsp;&nbsp;${formatNucleus({
+      mass: current.correctMass,
+      number: current.correctNumber,
+      symbol: current.correctSymbol
+    })}`;
+  }
+
+  document.getElementById('feedback').innerHTML = feedback;
+}
+
+function submitAnswer() {
+  let feedback = "";
+  let isCorrect = false;
+
+  if (current.type === "decayType") {
+    if (!selectedAnswer) {
+      alert("Please select an answer!");
+      return;
+    }
+    isCorrect = (selectedAnswer === current.correctAnswer);
+    feedback = isCorrect ? "✅ Correct!" : `❌ Wrong. Correct answer: ${capitalize(current.correctAnswer)} decay.`;
+  } else {
+    const symbol = document.getElementById('element-symbol').value.trim();
+    const number = parseInt(document.getElementById('atomic-number').value.trim());
+    const mass = parseInt(document.getElementById('mass-number').value.trim());
+
+    if (!symbol || isNaN(number) || isNaN(mass)) {
+      alert("Please fill in all fields!");
+      return;
+    }
+
+    isCorrect = (
+      symbol === current.correctSymbol &&
+      number === current.correctNumber &&
+      mass === current.correctMass
+    );
+
+    feedback = isCorrect
+      ? "✅ Correct!"
+      : `❌ Wrong. Correct answer: ${formatNucleus({mass: current.correctMass, number: current.correctNumber, symbol: current.correctSymbol})}`;
+  }
+
+  if (isCorrect && !hasRevealed) correctCount++;
+  attemptedCount++;
+
+  document.getElementById('feedback').innerHTML = feedback;
+  updateProgress();
+
+  setTimeout(() => {
+    loadQuestion();
+  }, 2000);
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// Start
+loadQuestion();
+</script>
+</body>
+</html>
