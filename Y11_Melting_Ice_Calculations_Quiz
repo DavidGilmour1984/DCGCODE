@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Water Temperature Quiz</title>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      padding: 2em;
+      background-color: #f5f5f5;
+      text-align: center;
+    }
+
+    .card {
+      background: white;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 700px;
+      margin: auto;
+    }
+
+    input {
+      padding: 0.6em;
+      font-size: 1rem;
+      margin: 0.5em;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      margin-top: 1em;
+      padding: 0.8em 1.6em;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #result, #working, .info-list {
+      margin-top: 1em;
+      font-weight: bold;
+      white-space: pre-line;
+      text-align: left;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .info-list ul {
+      list-style-type: disc;
+      padding-left: 1.5em;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Final Temperature Quiz</h2>
+    <p id="question"></p>
+    <input id="userAnswer" type="number" placeholder="Final Temperature (°C)">
+    <br>
+    <button onclick="submitAnswer()">Submit Answer</button>
+    <button onclick="generateQuestion()">New Question</button>
+    <button onclick="showWorking()">Show Working</button>
+    <div id="result"></div>
+    <div id="working"></div>
+
+    <div class="info-list">
+      <h3>Thermal Properties (J/kg or J/kg°C)</h3>
+      <ul>
+        <li>Specific Heat of Ice: 2100 J/kg°C</li>
+        <li>Specific Heat of Water: 4186 J/kg°C</li>
+        <li>Specific Heat of Steam: 2000 J/kg°C</li>
+        <li>Latent Heat of Fusion (Ice to Water): 334000 J/kg</li>
+        <li>Latent Heat of Vaporization (Water to Steam): 2260000 J/kg</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const cWater = 4186;
+    const cIce = 2100;
+    const Lf = 334000;
+
+    let currentAnswer = 0;
+    let currentWorking = "";
+
+    function generateQuestion() {
+      const waterVolume = Math.floor(Math.random() * 200 + 200);
+      const waterTemp = Math.floor(Math.random() * 40 + 40);
+      const iceVolume = Math.floor(Math.random() * 100 + 50);
+      const iceTemp = Math.floor(Math.random() * 5 - 10);
+
+      const mw = waterVolume / 1000;
+      const mi = iceVolume / 1000;
+      const tw = waterTemp;
+      const ti = iceTemp;
+
+      const energyIceToZero = mi * cIce * (0 - ti);
+      const energyMeltIce = mi * Lf;
+      const totalEnergyNeeded = energyIceToZero + energyMeltIce;
+      const energyWaterCanGive = mw * cWater * tw;
+      const remainingEnergy = energyWaterCanGive - totalEnergyNeeded;
+      const totalMass = mw + mi;
+      const tempRise = remainingEnergy / (totalMass * cWater);
+      currentAnswer = tempRise;
+
+      currentWorking = `Given:
+  Mass of water (mw) = ${mw.toFixed(3)} kg
+  Temp of water (tw) = ${tw} °C
+  Mass of ice (mi) = ${mi.toFixed(3)} kg
+  Temp of ice (ti) = ${ti} °C
+
+Calculations:
+  Energy to warm ice to 0°C:
+    Q = mi × cIce × ΔT = ${mi.toFixed(3)} × ${cIce} × (0 - ${ti}) = ${energyIceToZero.toFixed(2)} J
+
+  Energy to melt ice:
+    Q = mi × Lf = ${mi.toFixed(3)} × ${Lf} = ${energyMeltIce.toFixed(2)} J
+
+  Total energy required to melt ice:
+    ${energyIceToZero.toFixed(2)} + ${energyMeltIce.toFixed(2)} = ${totalEnergyNeeded.toFixed(2)} J
+
+  Energy from warm water:
+    Q = mw × cWater × ΔT = ${mw.toFixed(3)} × ${cWater} × ${tw} = ${energyWaterCanGive.toFixed(2)} J
+
+  Remaining energy:
+    ${energyWaterCanGive.toFixed(2)} - ${totalEnergyNeeded.toFixed(2)} = ${remainingEnergy.toFixed(2)} J
+
+  Final temperature:
+    ΔT = Q / (m × c) = ${remainingEnergy.toFixed(2)} / (${(totalMass).toFixed(3)} × ${cWater}) = ${tempRise.toFixed(2)} °C`;
+
+      document.getElementById("question").innerText = `${(mw * 1000).toFixed(0)}ml of ${tw}°C water is added to ${(mi * 1000).toFixed(0)}ml of ${ti}°C ice. Calculate the final temperature.`;
+      document.getElementById("result").innerText = "";
+      document.getElementById("working").innerText = "";
+      document.getElementById("userAnswer").value = "";
+    }
+
+    function submitAnswer() {
+      const userInput = parseFloat(document.getElementById("userAnswer").value);
+      if (isNaN(userInput)) {
+        alert("Please enter a number.");
+        return;
+      }
+      const error = Math.abs(userInput - currentAnswer);
+      const feedback = error < 0.5 ? "✅ Correct!" : `❌ Incorrect. The correct answer is ${currentAnswer.toFixed(2)} °C.`;
+      document.getElementById("result").innerText = feedback;
+    }
+
+    function showWorking() {
+      document.getElementById("working").innerText = currentWorking;
+    }
+
+    generateQuestion();
+  </script>
+</body>
+</html>
