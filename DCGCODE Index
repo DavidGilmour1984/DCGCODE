@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Home Page</title>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #f4f4f4;
+      text-align: center;
+      margin: 0;
+      color: white;
+    }
+
+    .header {
+      width: 100%;
+      height: 20vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    h1 {
+      font-size: 45px;
+      color: black;
+      margin: 0;
+    }
+
+    .container-wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      width: 100%;
+      justify-content: center;
+      align-items: flex-start;
+      padding-bottom: 50px;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(10px);
+      width: 90%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 20px 0;
+    }
+
+    .container h2 {
+      margin-bottom: 20px;
+      color: black;
+    }
+
+    button {
+      padding: 15px 30px;
+      font-size: 18px;
+      cursor: pointer;
+      margin-bottom: 20px;
+      border: none;
+      border-radius: 5px;
+      background: #333;
+      color: white;
+      transition: 0.3s;
+      width: 100%;
+      max-width: 280px;
+    }
+
+    button:hover {
+      background: Grey;
+      transform: scale(1.05);
+    }
+
+    .back-button {
+      background: darkred;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>DCGCODE</h1>
+  </div>
+
+  <div class="container-wrapper" id="mainMenu">
+    <div class="container">
+      <h2>Main Menu</h2>
+      <button onclick="showCategory('l3_physics_simulators')">y13 Physics Simulators</button>
+      <button onclick="showCategory('Y11_physics_simulators')">Y11 Physics</button>
+      <button onclick="showCategory('bio')">Biology Tools</button>
+      <button onclick="showCategory('universal')">Universal Loggers</button>
+      <button onclick="showCategory('specialised')">Specialised Loggers</button>
+      <button onclick="showCategory('onboard')">Onboard Data Loggers</button>
+      <button onclick="showCategory('rovers')">Rovers and Rockets</button>
+    </div>
+  </div>
+
+<div class="container-wrapper hidden" id="bio">
+  <div class="container">
+    <h2>School Simulators</h2>
+    <button onclick="location.href='bio_Cover_Percentage_Calculator.html'">Cover Percentage Calculator</button>
+    <button onclick="location.href='bio_Affected_Area_Calculator.html'">Affected Area Calculator</button>
+    <button onclick="location.href='bio_Player_Performance_Analysis.html'">Player Performance Analysis</button>
+    <button class="back-button" onclick="goBack()">Back</button>
+  </div>
+</div>
+
+<div class="container-wrapper hidden" id="Y11_physics_simulators">
+  <div class="container">
+    <h2>School Simulators</h2>
+    <button onclick="location.href='Y11_Alpha_Beta_Gamma Decay.html'">Atomic Physics: Radioactive Decay</button>
+    <button onclick="location.href='Y11_Half Life Graph Quiz.html'">Atomic Physics: Half-life Graph quiz</button>
+    <button onclick="location.href='Y11_Half-Life_Quiz.html'">Atomic Physics: Half-life Graph quiz</button>
+    <button onclick="location.href='Y11_Water_Phase_Change_Energy_Calculations.html'">Heat: Water Phase Change Energy Calculations</button>
+    <button onclick="location.href='Y11_Melting_Ice_Calculations_Quiz.html'">Heat: Energy Equilibrium Calculations</button>
+    .html
+    <button class="back-button" onclick="goBack()">Back</button>
+  </div>
+</div>
+
+<!-- L3 Physics Simulators -->
+<div class="container-wrapper hidden" id="l3_physics_simulators">
+  <div class="container">
+    <h2>L3 Physics Simulators</h2>
+    <button onclick="location.href='l3_physics_simulators_Horizontal_Spring_SHM.html'">Mechancis - SHM Spring</button>
+    <button onclick="location.href='l3_physics_simulators_Pendulum_SHM.html'">Mechanics - SHM Pendulum</button>
+    <button onclick="location.href='l3_physics_simulators_Sound_Resonance.html'">Waves - Sound Standing Waves</button>
+    <button onclick="location.href='l3_physics_simulators_String_Standing_Waves.html'">Waves - String Standing Waves</button>
+    <button onclick="location.href='onboard_Audio_Frequency_Analyser.html'">Waves -Audio Frequency Analyser</button>
+    <button onclick="location.href='l3_physics_simulators_Capacitor_Charging.html'">Emag - Capacitor Charging</button>
+    <button onclick="location.href='l3_physics_simulators_LCR_Phasor.html'">Emag - LCR Phasor</button>
+    <button onclick="location.href='l3_physics_simulators_LCR_Sine_Waves.html'">Emag - LCR Sine Waves</button>
+    <button class="back-button" onclick="goBack()">Back</button>
+  </div>
+</div>
+
+  <!-- Universal -->
+  <div class="container-wrapper hidden" id="universal">
+    <div class="container">
+      <h2>Universal Loggers</h2>
+      <button onclick="location.href='universal_Universal_Logger_5CH_2.0.html'">Universal Logger 5CH 2.0</button>
+      <button onclick="location.href='universal_Universal_Logger_2.0.html'">Universal Logger 2.0</button>
+      <button onclick="location.href='universal_Serial_Communication.html'">Serial Communication</button>
+      <button onclick="location.href='universal_Serial_Streamer.html'">Serial Streamer</button>
+      <button class="back-button" onclick="goBack()">Back</button>
+    </div>
+  </div>
+
+  <!-- Specialised -->
+  <div class="container-wrapper hidden" id="specialised">
+    <div class="container">
+      <h2>Specialised Loggers</h2>
+      <button onclick="location.href='specialised_80PX_Camera_Threshold_Timer_3D_Plot.html'">80PX Camera Threshold Timer 3D Plot</button>
+      <button onclick="location.href='specialised_80PX_Camera_White_Cal_Threshold_Timer.html'">80PX Camera White Cal Threshold Timer</button>
+      <button onclick="location.href='specialised_Laser_Gate_Timer.html'">Laser Gate Timer</button>
+      <button onclick="location.href='specialised_Capacitor_Timer.html'">Capacitor Timer</button>
+      <button onclick="location.href='specialised_AS7343_Spectrum.html'">AS7343 Spectrum</button>
+      <button onclick="location.href='specialised_Choice_Chamber.html'">Choice Chamber</button>
+      <button onclick="location.href='specialised_CO2_Monitor.html'">CO2 Monitor</button>
+      <button onclick="location.href='specialised_GPS_Map_Tracker.html'">GPS Map Tracker</button>
+      <button onclick="location.href='specialised_Magnetic_Field_Sensor_Array.html'">Magnetic Field Sensor Array</button>
+      <button onclick="location.href='specialised_Torque_Equilibrium.html'">Torque Equilibrium</button>
+      <button class="back-button" onclick="goBack()">Back</button>
+    </div>
+  </div>
+
+  <!-- Onboard -->
+  <div class="container-wrapper hidden" id="onboard">
+    <div class="container">
+      <h2>Onboard Data Loggers</h2>
+      <button onclick="location.href='onboard_Audio_Frequency_Analyser.html'">Audio Frequency Analyser</button>
+      <button onclick="location.href='onboard_Webcam_Video_Capture.html'">Webcam Video Capture</button>
+      <button class="back-button" onclick="goBack()">Back</button>
+    </div>
+  </div>
+
+  <!-- Rovers -->
+  <div class="container-wrapper hidden" id="rovers">
+    <div class="container">
+      <h2>Rovers and Rockets</h2>
+      <button onclick="location.href='rovers_Pharos_Ground_Station_3.html'">Pharos Ground Station 3</button>
+      <button onclick="location.href='rovers_T_Rex_Rover_Targeting.html'">T Rex Rover Targeting</button>
+      <button class="back-button" onclick="goBack()">Back</button>
+    </div>
+  </div>
+
+  <script>
+    function showCategory(id) {
+      document.getElementById('mainMenu').classList.add('hidden');
+      document.querySelectorAll('.container-wrapper').forEach(wrapper => {
+        if (wrapper.id === id) {
+          wrapper.classList.remove('hidden');
+        } else if (wrapper.id !== 'mainMenu') {
+          wrapper.classList.add('hidden');
+        }
+      });
+    }
+
+    function goBack() {
+      document.getElementById('mainMenu').classList.remove('hidden');
+      document.querySelectorAll('.container-wrapper').forEach(wrapper => {
+        if (wrapper.id !== 'mainMenu') {
+          wrapper.classList.add('hidden');
+        }
+      });
+    }
+  </script>
+</body>
+</html>
