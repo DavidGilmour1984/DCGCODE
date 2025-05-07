@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect to COM Port</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 20px;
+        }
+        #data-container {
+            width: 25%;
+        }
+        #graph-container {
+            width: 75%;
+        }
+        .button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 5px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 2px 2px;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            margin: 5px auto;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 2px;
+            text-align: center;
+        }
+        #graph {
+            width: 100%;
+            height: 300px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            position: relative;
+        }
+        .bar {
+            width: 7%;
+            display: inline-block;
+            position: relative;
+        }
+        .bar-value {
+            position: absolute;
+            top: -20px;
+            width: 100%;
+            text-align: center;
+            color: black;
+            font-size: 12px;
+        }
+        .bar-text {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            color: white;
+            font-size: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="data-container">
+        <h1>AS7343 Spectrometer</h1>
+        <button class="button" id="connectButton">Connect to COM Port</button>
+
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>Wavelength (nm)</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody id="dataBody">
+                <!-- Data rows will be dynamically added here -->
+            </tbody>
+        </table>
+    </div>
+
+    <div id="graph-container">
+        <div id="graph"></div>
+    </div>
+
+    <script>
+        let port;
+        let reader;
+        let decoder = new TextDecoder();
+        let serialData = "";
+
+        const wavelengths = [
+            "Clear", "410nm", "415nm", "440nm", "445nm", "470nm", "480nm",
+            "505nm", "515nm", "555nm", "590nm", "630nm", "680nm"
+        ];
+
+        const colors = [
+            "#FFFFFF", "#B0C4DE", "#6495ED", "#0000FF", "#00BFFF", "#00FF00",
+            "#ADFF2F", "#FFFF00", "#FFD700", "#FF8C00", "#FF6347", "#8B0000", "#800080"
+        ];
+
+        document.getElementById('connectButton').addEventListener('click', async () => {
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 9600 });
+                startReading();
+                console.log("Connected to COM port!");
+            } catch (error) {
+                console.error("Failed to connect to COM port:", error);
+            }
+        });
+
+        async function startReading() {
+            const reader = port.readable.getReader();
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                serialData += decoder.decode(value, { stream: true });
+
+                if (serialData.includes("\n")) {
+                    let lines = serialData.split("\n");
+                    let latestData = lines[lines.length - 2];
+                    let dataValues = latestData.split(",");
+                    updateTable(dataValues);
+                    updateGraph(dataValues);
+                    serialData = "";
+                }
+            }
+        }
+
+        function updateTable(dataValues) {
+            const tbody = document.getElementById('dataBody');
+            tbody.innerHTML = '';
+            for (let i = 0; i < wavelengths.length; i++) {
+                let row = document.createElement('tr');
+                let wavelengthCell = document.createElement('td');
+                wavelengthCell.textContent = wavelengths[i];
+                let valueCell = document.createElement('td');
+                valueCell.textContent = dataValues[i] || "No data";
+                row.appendChild(wavelengthCell);
+                row.appendChild(valueCell);
+                tbody.appendChild(row);
+            }
+        }
+
+        function updateGraph(dataValues) {
+            const graphContainer = document.getElementById("graph");
+            graphContainer.innerHTML = '';
+            const maxValue = 140;
+
+            for (let i = 0; i < wavelengths.length; i++) {
+                let barValue = parseFloat(dataValues[i]) || 0;
+
+                let bar = document.createElement("div");
+                bar.classList.add("bar");
+                bar.style.height = `${(barValue / maxValue) * 100}%`;
+                bar.style.backgroundColor = colors[i];
+
+                let valueLabel = document.createElement("div");
+                valueLabel.classList.add("bar-value");
+                valueLabel.textContent = barValue;
+
+                let label = document.createElement("div");
+                label.classList.add("bar-text");
+                label.textContent = wavelengths[i];
+
+                bar.appendChild(valueLabel);
+                bar.appendChild(label);
+                graphContainer.appendChild(bar);
+            }
+        }
+    </script>
+</body>
+</html>
