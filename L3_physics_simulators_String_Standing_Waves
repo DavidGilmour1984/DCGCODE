@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wave on a String Simulator</title>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      background-color: #f5f5f5;
+      padding: 0.5em;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      padding: 1.5em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 1300px;
+      margin: auto;
+      overflow: hidden;
+    }
+    canvas {
+      background-color: #ffffff;
+      border: none;
+      margin: 0.5em;
+      border-radius: 12px;
+      width: 100%;
+      height: 300px;
+    }
+    label {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    select, input[type="number"] {
+      width: 100px;
+      padding: 0.4em;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      margin-right: 10px;
+    }
+    button {
+      margin-top: 1em;
+      padding: 0.5em 1.6em;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #28a745;
+      color: white;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    button:disabled {
+      background-color: #777;
+      color: #ccc;
+      cursor: not-allowed;
+    }
+    #resonanceInfo {
+      margin-top: 1em;
+      font-weight: bold;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Wave on a String Simulator</h2>
+    <div>
+      <label for="tubeType">Tube Type:</label>
+      <select id="tubeType" onchange="startSimulation()">
+        <option value="open-open">Open-Open</option>
+        <option value="open-closed">Open-Closed</option>
+        <option value="closed-closed">Closed-Closed</option>
+      </select>
+
+      <label for="length">String Length (m):</label>
+      <input type="number" id="length" value="1" min="0.1" step="0.01">
+
+      <label for="speed">Wave Speed (m/s):</label>
+      <input type="number" id="speed" value="3" min="0.1" step="0.1">
+
+      <div id="resonanceInfo"></div>
+
+      <!-- Harmonic buttons -->
+      <div>
+        <button id="harmonic1" onclick="changeHarmonic(1)">1st Harmonic</button>
+        <button id="harmonic2" onclick="changeHarmonic(2)">2nd Harmonic</button>
+        <button id="harmonic3" onclick="changeHarmonic(3)">3rd Harmonic</button>
+        <button id="harmonic4" onclick="changeHarmonic(4)">4th Harmonic</button>
+        <button id="harmonic5" onclick="changeHarmonic(5)">5th Harmonic</button>
+        <button id="harmonic6" onclick="changeHarmonic(6)">6th Harmonic</button>
+        <button id="harmonic7" onclick="changeHarmonic(7)">7th Harmonic</button>
+        <button id="harmonic8" onclick="changeHarmonic(8)">8th Harmonic</button>
+      </div>
+    </div>
+
+    <canvas id="simCanvas" width="1200" height="300"></canvas>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("simCanvas");
+    const ctx = canvas.getContext("2d");
+    let animationId;
+    let selectedHarmonic = 1;
+    let frequency = 0;
+
+    function displayResonantFrequency(tubeType, speed, length) {
+      let fundamental;
+      if (tubeType === "open-open" || tubeType === "closed-closed") {
+        fundamental = speed / (2 * length);
+      } else if (tubeType === "open-closed") {
+        fundamental = speed / (4 * length);
+      }
+      frequency = fundamental * selectedHarmonic;
+      document.getElementById("resonanceInfo").innerText =
+        `Current Frequency: ${frequency.toFixed(2)} Hz`;
+    }
+
+    function changeHarmonic(harmonic) {
+      if (harmonic % 2 === 0 && document.getElementById("tubeType").value === "open-closed") {
+        return; // Prevent changing to even harmonics for "open-closed"
+      }
+      selectedHarmonic = harmonic;
+      startSimulation(); // Restart simulation with new harmonic
+    }
+
+    function updateHarmonicsButtons() {
+      const tubeType = document.getElementById("tubeType").value;
+      if (tubeType === "open-closed") {
+        document.getElementById("harmonic2").disabled = true; // Disable even harmonics
+        document.getElementById("harmonic4").disabled = true;
+        document.getElementById("harmonic6").disabled = true;
+        document.getElementById("harmonic8").disabled = true;
+        document.getElementById("harmonic1").disabled = false;
+        document.getElementById("harmonic3").disabled = false;
+        document.getElementById("harmonic5").disabled = false;
+        document.getElementById("harmonic7").disabled = false;
+      } else {
+        document.getElementById("harmonic2").disabled = false;
+        document.getElementById("harmonic4").disabled = false;
+        document.getElementById("harmonic6").disabled = false;
+        document.getElementById("harmonic8").disabled = false;
+        document.getElementById("harmonic1").disabled = false;
+        document.getElementById("harmonic3").disabled = false;
+        document.getElementById("harmonic5").disabled = false;
+        document.getElementById("harmonic7").disabled = false;
+      }
+    }
+
+    function startSimulation() {
+      cancelAnimationFrame(animationId);
+
+      const tubeType = document.getElementById("tubeType").value;
+      const length = parseFloat(document.getElementById("length").value);
+      const speed = parseFloat(document.getElementById("speed").value);
+
+      displayResonantFrequency(tubeType, speed, length);
+
+      const pixelsPerMeter = canvas.width / length;
+
+      let time = 0;
+      const wavePoints = [];
+
+      // Update buttons for available harmonics based on the tube type
+      updateHarmonicsButtons();
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const tubeStartX = 0;
+        const tubeEndX = canvas.width;
+
+        // Create a wave on the string
+        ctx.beginPath();
+        for (let i = 0; i < canvas.width; i++) {
+          const xMeters = i / pixelsPerMeter;
+
+          let envelope = 0;
+
+          // Logic for different tube types and harmonics
+          if (tubeType === "open-open") {
+            // Open-Open tube: Antinodes at the ends, nodes at harmonic positions
+            envelope = Math.cos(selectedHarmonic * Math.PI * xMeters / length);
+          } else if (tubeType === "closed-closed") {
+            // Closed-Closed tube: Nodes at the ends, antinode at harmonic positions
+            envelope = Math.sin(selectedHarmonic * Math.PI * xMeters / length);
+          } else if (tubeType === "open-closed") {
+            // Open-Closed tube: Node at closed end, antinode at open end
+            envelope = Math.sin(selectedHarmonic * Math.PI * xMeters / (2 * length));
+          }
+
+          // Apply the sine wave to the y-axis (vertical direction), doubling the amplitude
+          const y = canvas.height / 2 + envelope * 100 * Math.sin(2 * Math.PI * frequency * time);
+
+          wavePoints.push({ x: i, y });
+
+          // Draw the string as a wave line
+          if (i === 0) {
+            ctx.moveTo(i, y);
+          } else {
+            ctx.lineTo(i, y);
+          }
+        }
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        time += 0.015;
+        animationId = requestAnimationFrame(animate);
+      }
+
+      animate();
+    }
+
+    // Initialize the simulation on page load with default values
+    window.onload = () => {
+      document.getElementById("speed").value = 3;
+      document.getElementById("length").value = 1;
+      document.getElementById("tubeType").value = "open-open";
+      startSimulation();
+    };
+  </script>
+</body>
+</html>
