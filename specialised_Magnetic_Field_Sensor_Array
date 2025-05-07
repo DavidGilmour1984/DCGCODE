@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Arduino Data Stream</title>
+    <style>
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        #content {
+            padding: 20px;
+        }
+        #graphContainer {
+            width: 100%;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+        #dataTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #dataTable th, #dataTable td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        #comPorts {
+            margin-top: 10px;
+        }
+        #filename {
+            font-size: 16px;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="content">
+        <h1>Gause Sensor Array</h1>
+        <button onclick="requestComPorts()">Connect to Sensor</button>
+        <button onclick="zeroValues()">Zero Values</button>
+        <input type="text" id="filename" placeholder="Enter CSV filename">
+        <button onclick="pauseData()">Pause Data</button>
+        <button onclick="saveData()">Save Data</button>
+        <div id="comPorts"></div>
+        <div id="graphContainer">
+            <canvas id="dataGraph"></canvas>
+        </div>
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>5mm</th>
+                    <th>10mm</th>
+                    <th>15mm</th>
+                    <th>20mm</th>
+                    <th>25mm</th>
+                    <th>30mm</th>
+                    <th>35mm</th>
+                    <th>40mm</th>
+                    <th>45mm</th>
+                    <th>50mm</th>
+                    <th>55mm</th>
+                    <th>60mm</th>
+                    <th>65mm</th>
+                    <th>70mm</th>
+                    <th>75mm</th>
+                    <th>80mm</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-smoothing"></script> <!-- Chart.js smoothing plugin -->
+    <script>
+        let chart;
+        let reader;
+        let inputStream;
+        let outputStream;
+        let dataBuffer = []; // To store the last 5 values
+        let zeroedValues = Array(16).fill(0); // To store the zeroed values
+        let isPaused = false; // Flag to pause/resume data
+
+        async function requestComPorts() {
+            try {
+                // Request access to the serial ports
+                const port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 9600 });
+
+                // Set up the serial reader
+                const reader = port.readable.getReader();
+                const writer = port.writable.getWriter();
+
+                inputStream = reader;
+                outputStream = writer;
+
+                // Start listening to the incoming serial data
+                readSerialData();
+            } catch (err) {
+                console.error("Error accessing COM port: ", err);
+                alert("Error accessing COM port");
+            }
+        }
+
+        // Function to handle incoming serial data
+        async function readSerialData() {
+            const decoder = new TextDecoder();
+            let dataBuffer = "";
+
+            while (true) {
+                if (isPaused) {
+                    await new Promise(resolve => setTimeout(resolve, 100)); // Wait while paused
+                    continue;
+                }
+
+                try {
+                    const { value, done } = await inputStream.read();
+                    if (done) {
+                        break;
+                    }
+                    dataBuffer += decoder.decode(value);
+
+                    // Check if we have a full CSV string
+                    if (dataBuffer.includes("\n")) {
+                        const lines = dataBuffer.split("\n");
+                        dataBuffer = lines.pop(); // Keep the last incomplete line for the next read
+                        lines.forEach(line => {
+                            if (line) {
+                                processData(line);
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.error("Error reading from serial port: ", err);
+                    break;
+                }
+            }
+        }
+
+        function processData(csvData) {
+            const dataArray = csvData.split(','); // Split CSV string into individual values
+            const time = dataArray[0];  // First value is time
+            let values = dataArray.slice(1, 17); // Next 16 values are the measurements
+
+            // Subtract zeroed values if zeroedValues has been set
+            if (zeroedValues) {
+                values = values.map((value, index) => {
+                    return parseFloat(value) - zeroedValues[index];
+                });
+            }
+
+            // Add new data to buffer (last 5 values)
+            if (dataBuffer.length >= 5) {
+                dataBuffer.shift(); // Remove the oldest value if buffer exceeds 5
+            }
+
+            // Store the new data with time and 16 values
+            dataBuffer.push({ time, values });
+
+            // Update the table with the latest 5 values
+            updateTable();
+
+            // Update the graph with the latest values
+            updateGraph(time, values);
+        }
+
+        function updateTable() {
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = ''; // Clear the existing table
+
+            // Add each value in dataBuffer to the table
+            dataBuffer.forEach((entry) => {
+                const row = document.createElement('tr');
+                const timeCell = document.createElement('td');
+                timeCell.textContent = entry.time;
+                row.appendChild(timeCell);
+
+                entry.values.forEach((value) => {
+                    const cell = document.createElement('td');
+                    cell.textContent = value.toFixed(2);
+                    row.appendChild(cell);
+                });
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        function updateGraph(time, values) {
+            if (!chart) {
+                const ctx = document.getElementById('dataGraph').getContext('2d');
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: Array.from({ length: 16 }, (_, index) => `${(index + 1) * 5}mm`), // Label each of the 16 values as 5mm, 10mm, etc.
+                        datasets: [{
+                            label: 'Sensor Values',
+                            data: values, // Plot the 16 values on the Y-axis
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            fill: false,
+                            cubicInterpolationMode: 'monotone'  // Smoothing the line to a curve using Chart.js built-in option
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                type: 'category',
+                                labels: Array.from({ length: 16 }, (_, index) => `${(index + 1) * 5}mm`) // 16 points along the X-axis as 5mm, 10mm, etc.
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Gauss' // Y-axis label as Gauss
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                chart.data.datasets[0].data = values;
+                chart.update();
+            }
+        }
+
+        // Function to zero out the values
+        function zeroValues() {
+            if (dataBuffer.length > 0) {
+                const latestValues = dataBuffer[dataBuffer.length - 1].values;
+                zeroedValues = latestValues.map(value => parseFloat(value));
+                console.log("Zeroed Values: ", zeroedValues);
+            }
+        }
+
+        // Pause data collection
+        function pauseData() {
+            isPaused = !isPaused;
+            console.log(isPaused ? "Data Paused" : "Data Resumed");
+        }
+
+        // Save the data as CSV
+        function saveData() {
+            const filename = document.getElementById('filename').value || 'data.csv'; // Default filename if empty
+            const csvContent = generateCSV();
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+        }
+
+        // Generate CSV from the table data
+        function generateCSV() {
+            const header = ['Time', '5mm', '10mm', '15mm', '20mm', '25mm', '30mm', '35mm', '40mm', '45mm', '50mm', '55mm', '60mm', '65mm', '70mm', '75mm', '80mm'];
+            let csv = header.join(',') + '\n';
+
+            dataBuffer.forEach((entry) => {
+                csv += [entry.time, ...entry.values.map(v => v.toFixed(2))].join(',') + '\n';
+            });
+
+            return csv;
+        }
+    </script>
+</body>
+</html>
