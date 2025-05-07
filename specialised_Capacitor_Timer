@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Serial Port Reader</title>
+    <style>
+        body {
+            font-family: Helvetica, sans-serif;
+            display: flex;
+        }
+
+        #controlsContainer {
+            display: flex;
+            flex-direction: column;
+            width: 25%;
+            padding-right: 20px;
+            box-sizing: border-box;
+        }
+
+        #controlsTitle {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        #serialData {
+            background-color: #333;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 18px;
+            margin-top: 10px;
+            color: #ddd;
+            border: 1px solid #555;
+            width: 100%;
+            text-align: center;
+            height: auto;
+            overflow-y: auto;
+            font-family: monospace;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        #connectButton, #startButton, #clearTableButton, #exportButton {
+            padding: 10px 15px;
+            font-size: 18px;
+            background-color: #555;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+            margin-top: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        #connectButton:hover, #startButton:hover, #clearTableButton:hover, #exportButton:hover {
+            background-color: #777;
+        }
+
+        #connectButton.connected {
+            background-color: green;
+        }
+
+        #thresholdContainer, #timeThresholdContainer, #filenameContainer {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        #thresholdLabel, #timeThresholdLabel, #filenameLabel {
+            margin-right: 5px;
+            color: #333;
+            font-size: 18px;
+        }
+
+        #thresholdInput, #timeThresholdInput, #filenameInput {
+            padding: 10px;
+            font-size: 18px;
+            border: 1px solid #555;
+            border-radius: 5px;
+            width: 100%;
+            text-align: center;
+            background-color: #333;
+            color: #ddd;
+            outline: none;
+            font-family: Helvetica, sans-serif;
+            box-sizing: border-box;
+        }
+
+        #timerDisplay {
+            background-color: #333;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-size: 18px;
+            margin-top: 10px;
+            color: #ddd;
+            border: 1px solid #555;
+            width: 100%;
+            text-align: center;
+            font-family: Helvetica, sans-serif;
+            box-sizing: border-box;
+        }
+
+        #lapsTable {
+            width: 75%;
+            border-collapse: collapse;
+            margin-left: 20px;
+            margin-top: 10px;
+            height: auto;
+            overflow-y: auto;
+        }
+
+        #lapsTable th, #lapsTable td {
+            border: 1px solid #555;
+            padding: 8px;
+            text-align: center;
+            color: #000;
+        }
+
+        #lapsTable th {
+            background-color: #555;
+            color: #fff;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="controlsContainer">
+        <h2 id="controlsTitle">Capacitive Lap Timer</h2>
+        <button id="connectButton">Connect to Serial Port</button>
+        <div id="thresholdContainer">
+            <label id="thresholdLabel">Sensor Threshold:</label>
+            <input type="text" id="thresholdInput" value="1950">
+        </div>
+        <div id="timeThresholdContainer">
+            <label id="timeThresholdLabel">Time Threshold (ms):</label>
+            <input type="text" id="timeThresholdInput" value="200">
+        </div>
+        <button id="startButton">Start Timer</button>
+        <div id="serialData">Sensor Value: 1000</div>
+        <div id="timerDisplay">Time: 0.000 seconds</div>
+        <div id="filenameContainer" style="margin-top: 20px;">
+            <label id="filenameLabel">Filename:</label>
+            <input type="text" id="filenameInput" value="lap_data">
+        </div>
+        <button id="exportButton">Export Data</button>
+        <button id="clearTableButton">Clear Table</button>
+    </div>
+
+    <table id="lapsTable">
+        <tr>
+            <th>Lap Number</th>
+            <th>Time</th>
+        </tr>
+    </table>
+
+    <script>
+        const connectButton = document.getElementById('connectButton');
+        const serialData = document.getElementById('serialData');
+        const thresholdInput = document.getElementById('thresholdInput');
+        const timeThresholdInput = document.getElementById('timeThresholdInput');
+        const filenameInput = document.getElementById('filenameInput');
+        const exportButton = document.getElementById('exportButton');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const startButton = document.getElementById('startButton');
+        const lapsTable = document.getElementById('lapsTable');
+        const clearTableButton = document.getElementById('clearTableButton');
+
+        let port;
+        let reader;
+        let decoder = new TextDecoder();
+        let timerInterval;
+        let startTime;
+        let thresholdExceeded = false;
+        let lapNumber = 1;
+        let previousLapTime = 0;
+        let timing = false; // Added to track if the timer is running
+
+
+        connectButton.addEventListener('click', async () => {
+            if (!port) {
+                try {
+                    port = await navigator.serial.requestPort();
+                    await port.open({
+                        baudRate: 115200
+                    });
+                    connectButton.textContent = 'Disconnect';
+                    connectButton.classList.add('connected');
+                    reader = port.readable.getReader();
+                    readSerial();
+                } catch (error) {
+                    console.error('Serial port error:', error);
+                    serialData.textContent = 'Error: ' + error.message;
+                }
+            } else {
+                if (reader) {
+                    await reader.cancel();
+                    await reader.releaseLock();
+                }
+                if (port && port.writable) {
+                    await port.writable.getWriter().close();
+                }
+                if (port && port.readable) {
+                    await port.readable.cancel();
+                    await reader.releaseLock();
+                }
+
+                if (port) {
+                    await port.close();
+                }
+                port = null;
+                connectButton.textContent = 'Connect to Serial Port';
+                connectButton.classList.remove('connected');
+                serialData.textContent = 'Sensor Value: 1000';
+                clearInterval(timerInterval);
+                timerDisplay.textContent = 'Time: 0.000 seconds';
+                thresholdExceeded = false;
+                startButton.textContent = 'Start Timer';
+                lapNumber = 1;
+                previousLapTime = 0;
+                timing = false;
+                clearTable();
+
+            }
+        });
+
+        async function readSerial() {
+            let leftover = '';
+            while (port && port.readable) {
+                try {
+                    const {
+                        value,
+                        done
+                    } = await reader.read();
+                    if (done) {
+                        reader.releaseLock();
+                        break;
+                    }
+                    if (value) {
+                        const decodedValue = decoder.decode(value);
+                        const data = leftover + decodedValue;
+                        const lines = data.split('\n');
+                        leftover = lines.pop();
+
+                        for (const line of lines) {
+                            if (line.trim() !== '') {
+                                let sensorValue = parseFloat(line.trim());
+                                if (!isNaN(sensorValue)) {
+                                     checkThreshold(sensorValue);
+                                }
+                                serialData.textContent =  "Sensor Value: " + line.trim();
+                                serialData.scrollTop = serialData.scrollHeight;
+                                console.log('Received:', line.trim());
+                            }
+                        }
+                    }
+                } catch (error) {
+                    if (
+                        error.name === 'TypeError' &&
+                        error.message.includes(
+                            "Failed to execute 'read' on 'ReadableStreamReader': Cannot read from a stream that has been canceled"
+                        )
+                    ) {
+                        console.log('Read cancelled by disconnect');
+                    } else {
+                        console.error('Serial read error:', error);
+                        serialData.textContent = 'Error: ' + error.message;
+                    }
+                    break;
+                }
+            }
+        }
+
+        function checkThreshold(sensorValue) {
+            const threshold = parseFloat(thresholdInput.value);
+            const timeThreshold = parseFloat(timeThresholdInput.value);
+            if (isNaN(threshold)) return;
+            if (isNaN(timeThreshold)) return;
+
+            if (sensorValue > threshold && timing) {
+                const elapsedTime = Date.now() - startTime;
+                if (elapsedTime - previousLapTime >= timeThreshold) {
+                    addLapTime(elapsedTime);
+                    previousLapTime = elapsedTime;
+                }
+            }
+        }
+
+        startButton.addEventListener('click', () => {
+            if (!timerInterval) {
+                startTime = Date.now();
+                thresholdExceeded = false;
+                timing = true;
+                timerInterval = setInterval(() => {
+                    const elapsedTime = Date.now() - startTime;
+                    const formattedTime = (elapsedTime / 1000).toFixed(3);
+                    timerDisplay.textContent = `Time: ${formattedTime} seconds`;
+                }, 1);
+                startButton.textContent = 'Stop Timer';
+            } else {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                startButton.textContent = 'Start Timer';
+                timing = false;
+            }
+        });
+
+        function addLapTime(elapsedTime) {
+            const formattedTime = (elapsedTime / 1000).toFixed(3);
+            let row = lapsTable.insertRow();
+            let lapCell = row.insertCell();
+            let timeCell = row.insertCell();
+            lapCell.textContent = lapNumber++;
+            timeCell.textContent = formattedTime;
+        }
+
+        function clearTable() {
+            while (lapsTable.rows.length > 1) {
+                lapsTable.deleteRow(1);
+            }
+            lapNumber = 1;
+            previousLapTime = 0;
+        }
+
+        clearTableButton.addEventListener('click', clearTable);
+
+        exportButton.addEventListener('click', () => {
+            const filename = filenameInput.value.trim() || 'lap_data';
+            const data = [];
+            for (let i = 1; i < lapsTable.rows.length; i++) {
+                const row = lapsTable.rows[i];
+                const lapNumber = row.cells[0].textContent;
+                const time = row.cells[1].textContent;
+                data.push({
+                    'Lap Number': lapNumber,
+                    'Time': time
+                });
+            }
+            if (data.length === 0) {
+                alert('No data to export.');
+                return;
+            }
+            exportToExcel(data, filename);
+        });
+
+        function exportToExcel(data, filename) {
+            const xlsx = XLSX.utils.json_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, xlsx, 'Laps');
+            XLSX.writeFile(workbook, `${filename}.xlsx`);
+        }
+
+    </script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+</body>
+</html>
