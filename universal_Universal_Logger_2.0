@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Logger Connection</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+    font-family: Helvetica, sans-serif;
+    display: flex;
+    background-color: #f4f4f4; /* Dark background for contrast */
+    color: #ddd; /* Light text for readability */
+}
+
+#dataContainer {
+    width: 20%;
+    padding: 20px;
+    background-color: #222; /* Dark panel background */
+    border-right: 2px solid #444; /* Subtle separation */
+}
+
+h1 {
+    color: #fff; /* Ensure the heading stands out */
+}
+
+button {
+    font-size: 16px;
+    padding: 10px;
+    margin-top: 10px;
+    border: none;
+    cursor: pointer;
+    transition: 0.3s;
+    color: white;
+    background-color: #555; /* Grey background */
+    border-radius: 5px;
+}
+
+button:hover {
+    background-color: #777; /* Lighter grey on hover */
+}
+
+input[type="text"],
+input[type="number"] {
+    background-color: #333; /* Darker input field */
+    color: #ddd; /* Light text */
+    border: 1px solid #555;
+    padding: 5px;
+    border-radius: 5px;
+    outline: none;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #333;
+}
+
+th, td {
+    border: 1px solid #555;
+    padding: 5px;
+    text-align: center;
+    color: #ddd;
+}
+#graphContainer {
+    width: 80%;  /* Set the width of the graph container to 80% of the screen width */
+    height: 100%;  /* Set the height of the graph container to 100% of the viewport height */
+    margin: 0 auto;  /* Center the container */
+}
+
+
+    </style>
+</head>
+
+<body>
+    <div id="dataContainer">
+        <h1>Universal Logger 2.0</h1>
+        <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px;">
+            <button id="connectBtn" style="flex-grow: 1;">Connect to Sensor</button>
+        </div>
+        <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px;">
+            <button id="clearBtn" style="flex-grow: 1;">Clear Data</button>
+            <button id="pauseBtn" style="flex-grow: 1;">Pause</button>
+        </div>
+        <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px;">
+            <button id="saveBtn" style="flex-grow: 1;">Export Data</button>
+        </div>
+         <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px;">
+          <input type="text" id="fileName" placeholder="Enter file name" style="flex-grow: 1; height: 20px;">
+        </div>     
+        <!-- Sample Frequency Indicator -->
+
+        <!-- Sampling Interval Text Box -->
+        <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px;">
+            <input type="number" id="samplingInterval" placeholder="Sampling Interval (Seconds)" style="flex-grow: 1; height: 20px;">
+        </div>
+                <div id="sampleFrequency">Sample Frequency: Calculating...</div>
+
+
+        <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; font-size: 20px; flex-grow: 1;">
+                <span>Data</span><span style="margin-left: 5px;">points</span>
+            </div>
+            <input type="number" id="maxPoints" placeholder="Max Data Points" value="500" min="10" step="10"
+                style="flex-grow: 1; height: 20px; padding-top: 6px; padding-bottom: 6px;">
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Time (s)</th>
+                    <th id="sensorTypeHeading">Sensor Value</th>
+                </tr>
+            </thead>
+            <tbody id="dataTable"></tbody>
+        </table>
+    </div>
+
+    <div id="graphContainer">
+        <div id="sensorChart"></div>
+    </div>
+
+<script>
+        let port, reader;
+        let textDecoder = new TextDecoderStream();
+        let buffer = '';
+        let timeData = [];
+        let sensorData = [];
+        let updateRequested = false;
+        let isPaused = false;
+        let currentSensorType = "A"; // Default sensor type is "Force"
+
+        const sensorTypes = {
+            'A': { name: 'Force (N)', unit: 'N', updateChart: true },
+            'B': { name: 'CO2 (ppm)', unit: 'ppm', updateChart: true },
+            'C': { name: 'Temperature (C)', unit: 'C', updateChart: true },
+            'D': { name: 'Magnetic Field (mT)', unit: 'mT', updateChart: true },
+            'E': { name: 'Ralitive Humidity (%)', unit: '%', updateChart: true },
+            'F': { name: 'CO2 (ppm)', unit: '%', updateChart: true },
+            'G': { name: 'Distance (mm)', unit: 'mm', updateChart: true },
+            'H': { name: 'Light level (Lux)', unit: 'Lux', updateChart: true },
+            'I': { name: 'Geophone (ADC)', unit: 'ADC', updateChart: true },
+        };
+
+        document.getElementById('connectBtn').addEventListener('click', async () => {
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                const readableStream = port.readable.pipeThrough(textDecoder);
+                reader = readableStream.getReader();
+                readData();
+            } catch (err) {
+                console.error('Error opening serial port:', err);
+            }
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            document.getElementById('dataTable').innerHTML = '';
+            timeData = [];
+            sensorData = [];
+            updateChart();
+            updateSampleFrequency();
+
+            let samplingInterval = document.getElementById('samplingInterval').value || 0;
+            if (port && port.writable) {
+                const writer = port.writable.getWriter();
+                writer.write(new TextEncoder().encode(`1,${samplingInterval}\n`));
+                writer.releaseLock();
+            }
+        });
+
+        document.getElementById('saveBtn').addEventListener('click', () => {
+            let fileName = document.getElementById('fileName').value.trim() || 'sensor_data';
+            let csvContent = `Time (s),${sensorTypes[currentSensorType]?.name || 'Sensor Value'}\n`;
+            for (let i = 0; i < timeData.length; i++) {
+                csvContent += `${timeData[i]},${sensorData[i]}\n`;
+            }
+            let blob = new Blob([csvContent], { type: 'text/csv' });
+            let a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = fileName + '.csv';
+            a.click();
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            isPaused = !isPaused;
+            document.getElementById('pauseBtn').textContent = isPaused ? "Resume" : "Pause";
+        });
+
+        async function readData() {
+            try {
+                while (true) {
+                    if (isPaused) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        continue;
+                    }
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    buffer += value;
+                    let lineEndIndex = buffer.indexOf('\n');
+                    while (lineEndIndex !== -1) {
+                        let line = buffer.slice(0, lineEndIndex).trim();
+                        processCSV(line);
+                        buffer = buffer.slice(lineEndIndex + 1);
+                        lineEndIndex = buffer.indexOf('\n');
+                    }
+                }
+            } catch (err) {
+                console.error('Error reading data:', err);
+            }
+        }
+
+       function processCSV(data) {
+    const parts = data.split(',');
+    if (parts.length < 3) return;
+
+    let timeSeconds = parseFloat(parts[0]) / 1000;
+    let sensorValue = parseFloat(parts[1]);
+    let sensorType = parts[2];
+
+    if (isNaN(timeSeconds) || isNaN(sensorValue)) {
+        console.error("Invalid data:", data);
+        return;
+    }
+
+    timeSeconds = timeSeconds.toFixed(3);
+    let table = document.getElementById('dataTable');
+
+    // Get the limit from the "Max Data Points" input field
+    let dataPointsLimit = parseInt(document.getElementById('maxPoints').value) || 500;
+
+    // Reset table and arrays if timeSeconds is 0.00 (start of new data)
+    if (timeSeconds === "0.00") {
+        table.innerHTML = '';
+        timeData = [];
+        sensorData = [];
+    }
+
+    // Prepend the new row at the top of the table
+    let row = table.insertRow(0);
+    row.insertCell(0).textContent = timeSeconds;
+    row.insertCell(1).textContent = sensorValue;
+
+    // Prepend new values to the arrays
+    timeData.unshift(parseFloat(timeSeconds));
+    sensorData.unshift(parseFloat(sensorValue));
+
+    // Limit the arrays size based on the dataPointsLimit
+    if (timeData.length > dataPointsLimit) {
+        timeData.pop();  // Remove the oldest value
+        sensorData.pop();
+    }
+
+    // Limit the table rows size based on the dataPointsLimit
+    while (table.rows.length > dataPointsLimit) {
+        table.deleteRow(table.rows.length - 1);  // Remove the oldest row
+    }
+
+    updateSensorType(sensorType);
+    updateSampleFrequency();
+
+    // Update the chart with the latest data
+    if (!updateRequested) {
+        updateRequested = true;
+        requestAnimationFrame(updateChart);
+    }
+}
+
+
+
+        function updateSensorType(sensorType) {
+            if (sensorTypes[sensorType]) {
+                document.getElementById('sensorTypeHeading').textContent = sensorTypes[sensorType].name;
+                currentSensorType = sensorType;
+            }
+        }
+
+        function updateSampleFrequency() {
+            if (timeData.length < 2) {
+                document.getElementById('sampleFrequency').textContent = "Sample Frequency: Not enough data";
+                return;
+            }
+            const timeDiff = timeData[0] - timeData[1];
+            const frequency = timeDiff > 0 ? (1 / timeDiff).toFixed(2) : 0;
+            document.getElementById('sampleFrequency').textContent = `Sample Frequency: ${frequency} Hz`;
+        }
+
+        function updateChart() {
+    updateRequested = false;
+
+    // Ensure all timeData and sensorData points are used
+    const trace1 = {
+        x: [...timeData], // Spread operator to ensure all values are used
+        y: [...sensorData],
+        type: 'scatter',
+        mode: 'lines+markers',
+        marker: { color: 'blue' },
+    };
+
+    const layout = {
+        title: `${sensorTypes[currentSensorType]?.name || 'Sensor'} vs Time`,
+        xaxis: { title: 'Time (s)' },
+        yaxis: { title: sensorTypes[currentSensorType]?.name || 'Value' }
+    };
+
+    // Ensure Plotly is properly updating the chart
+    Plotly.react('sensorChart', [trace1], layout);
+}
+    </script>
+
+</body>
+
+</html>
