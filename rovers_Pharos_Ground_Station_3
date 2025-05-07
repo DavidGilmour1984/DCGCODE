@@ -1,0 +1,394 @@
+
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GPS Tracker with Data Table</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+     <style>
+        body {
+            display: flex;
+            height: 100vh;
+            margin: 0;
+            font-family: Helvetica, sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        .left-section {
+            width: 30%;
+            padding: 20px;
+            background-color: #2f2f2f;
+            color: white;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .left-section h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background-color: #333;
+            color: white;
+            font-size: 18px;
+        }
+
+        table, th, td {
+            border: 1px solid #555;
+        }
+
+        th, td {
+            padding: 6px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #444;
+        }
+
+        button {
+            padding: 6px 12px;
+            font-size: 18px;
+            cursor: pointer;
+            background-color: #555;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #777;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        #connectButton.success {
+            background-color: green;
+            color: white;
+        }
+
+        .data-display {
+            background-color: #333;
+            padding: 0px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 4px;
+        }
+
+        .right-section {
+            width: 70%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+        
+        
+        #cursorCoords {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 1000;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="left-section">
+        <h1>Ground Station</h1>
+        <div class="button-container">
+            <button id="connectButton">Connect</button>
+            <button id="saveCSVButton">Export Data</button>
+            <button id="altitudeAudioButton">Altitude Audio Off</button>
+        </div>
+
+        <div class="button-container">
+            <button id="calculateButton">Calculate Distance & Bearing to Target</button>
+        </div>
+
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Value</th>
+                    <th>Unit</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Time</td><td id="time">--</td><td>s</td></tr>
+                <tr><td>Acceleration Z</td><td id="accelerationZ">--</td><td>m/s²</td></tr>
+                <tr><td>Barometric Altitude</td><td id="barometricAltitude">--</td><td>m</td></tr>
+                <tr><td>Max Altitude</td><td id="maxAltitude">--</td><td>m</td></tr>
+                <tr><td>GPS Altitude</td><td id="gpsAltitude">--</td><td>m</td></tr>
+                <tr><td>Latitude</td><td id="latitude">--</td><td>°</td></tr>
+                <tr><td>Longitude</td><td id="longitude">--</td><td>°</td></tr>
+                <tr><td>HDOP</td><td id="hdop">--</td><td></td></tr>
+                <tr><td>Battery Voltage</td><td id="batteryvoltage">--</td><td>V</td></tr>
+                <tr><td>Ejection Status</td><td id="ejectionstatus">--</td><td></td></tr>
+                <tr><td>SD Card Status</td><td id="sdstatus">--</td><td></td></tr>
+            </tbody>
+        </table>
+
+        <div class="location-input">
+            <p>Target Latitude: <input type="number" id="inputLatitude" placeholder="e.g., -37.8915" step="0.000001"></p>
+            <p>Target Longitude: <input type="number" id="inputLongitude" placeholder="e.g., 175.4284" step="0.000001"></p>
+        </div>
+        <div class="data-display">
+            <p><strong>Distance:</strong> <span id="distance">--</span> km   <strong>Bearing:</strong> <span id="bearing">--</span>°</p>
+        </div>
+    </div>
+
+    <div class="right-section">
+        <div id="map">
+            <div id="cursorCoords">Lat: --, Long: --</div>
+        </div>
+    </div>
+
+</body>
+
+ <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  let port;
+  let reader;
+  let buffer = '';
+  let map;
+  let marker;
+  let targetMarker;
+  let currentLat = null;
+  let currentLng = null;
+  let targetLat = null;
+  let targetLng = null;
+  let startTime = Date.now();
+  let receivedData = [];
+
+  // Initialize the map
+  document.addEventListener('DOMContentLoaded', () => {
+    const nzCenter = [-38.0, 175.0];
+    map = L.map('map', {
+      center: nzCenter,
+      zoom: 6,
+      scrollWheelZoom: true,
+    });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© OpenStreetMap contributors',
+    }).addTo(map);
+
+    marker = L.marker(nzCenter).addTo(map);
+    targetMarker = L.marker(nzCenter, { color: 'red' }).addTo(map);
+    targetMarker.setOpacity(0);
+
+    map.on('mousemove', (e) => {
+      const lat = e.latlng.lat.toFixed(6);
+      const lng = e.latlng.lng.toFixed(6);
+      document.getElementById('cursorCoords').textContent = `Lat: ${lat}, Long: ${lng}`;
+    });
+
+    map.on('click', (e) => {
+      const lat = e.latlng.lat.toFixed(6);
+      const lng = e.latlng.lng.toFixed(6);
+      document.getElementById('inputLatitude').value = lat;
+      document.getElementById('inputLongitude').value = lng;
+      targetMarker.setLatLng([lat, lng]).setOpacity(1);
+      targetLat = parseFloat(lat);
+      targetLng = parseFloat(lng);
+    });
+
+    document.getElementById('calculateButton').addEventListener('click', () => {
+      if (currentLat !== null && currentLng !== null && targetLat !== null && targetLng !== null) {
+        const distance = calculateDistance(currentLat, currentLng, targetLat, targetLng);
+        const bearing = calculateBearing(targetLat, targetLng, currentLat, currentLng);
+        document.getElementById('distance').textContent = distance.toFixed(2);
+        document.getElementById('bearing').textContent = bearing.toFixed(2);
+      }
+    });
+
+    document.getElementById('saveCSVButton').addEventListener('click', () => {
+      saveDataAsCSV();
+    });
+  });
+
+  document.getElementById('connectButton').addEventListener('click', async () => {
+    try {
+      port = await navigator.serial.requestPort();
+      await port.open({ baudRate: 115200 });
+
+      const connectButton = document.getElementById('connectButton');
+      connectButton.classList.add('success');
+      connectButton.textContent = 'Connected';
+
+      const textDecoder = new TextDecoderStream();
+      port.readable.pipeTo(textDecoder.writable);
+      reader = textDecoder.readable.getReader();
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += value;
+        let lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (let line of lines) {
+          const [time, accelZ, baroAlt, maxAlt, gpsAlt, lat, lng, hdop, batV, ejS, sD] = line.split(',').map(x => x.trim());
+          if (!isNaN(lat) && !isNaN(lng)) {
+            updateDataTable(time, accelZ, baroAlt, maxAlt, gpsAlt, lat, lng, hdop, batV, ejS, sD);
+            receivedData.push([time, accelZ, baroAlt, maxAlt, gpsAlt, lat, lng, hdop, batV, ejS, sD]);
+          }
+        }
+      }
+    } catch (error) {
+      alert(`Failed to connect: ${error.message}`);
+    }
+  });
+
+  function updateDataTable(time, accelZ, baroAlt, maxAlt, gpsAlt, lat, lng, hdop, batV, ejS, sD) {
+    const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
+    document.getElementById("time").textContent = timestamp; // Use the received timestamp
+    document.getElementById('accelerationZ').textContent = accelZ;
+    document.getElementById('barometricAltitude').textContent = baroAlt;
+    document.getElementById('maxAltitude').textContent = maxAlt;
+    document.getElementById('gpsAltitude').textContent = gpsAlt;
+    document.getElementById('latitude').textContent = lat;
+    document.getElementById('longitude').textContent = lng;
+    document.getElementById('hdop').textContent = hdop;
+    document.getElementById('batteryvoltage').textContent = batV;
+    document.getElementById('ejectionstatus').textContent = ejS;
+    document.getElementById('sdstatus').textContent = sD;
+    
+    currentLat = parseFloat(lat);
+    currentLng = parseFloat(lng);
+
+    marker.setLatLng([currentLat, currentLng]);
+  }
+
+  function saveDataAsCSV() {
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`;
+    const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+    const filename = `PGS_${dateStr}_${timeStr}.csv`;
+
+    let csvContent = 'Time,Acceleration Z,Barometric Altitude,Max Altitude,GPS Altitude,Latitude,Longitude,HDOP,Battery Voltage\n';
+    receivedData.forEach(row => {
+      csvContent += row.join(',') + '\n';
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
+  }
+
+  function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; 
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; 
+  }
+
+  function calculateBearing(lat1, lon1, lat2, lon2) {
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    lat1 = lat1 * Math.PI / 180;
+    lat2 = lat2 * Math.PI / 180;
+    const y = Math.sin(dLon) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+    const bearing = Math.atan2(y, x) * 180 / Math.PI;
+    return (bearing + 360) % 360; 
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    const leftSection = document.querySelector(".left-section");
+    const altitudeAudioContainer = document.createElement("div");
+    altitudeAudioContainer.innerHTML = `
+        <button id="altitudeAudioButton">Altitude Audio On</button>
+    `;
+    leftSection.appendChild(altitudeAudioContainer);
+});
+
+let isAudioEnabled = false;  // Flag to keep track of the audio state
+let measurementCount = 0;
+
+// Event listener for the audio toggle button
+document.getElementById('altitudeAudioButton').addEventListener('click', () => {
+    isAudioEnabled = !isAudioEnabled;  // Toggle the state
+    const button = document.getElementById('altitudeAudioButton');
+    
+                if (isAudioEnabled) {
+                    button.textContent = 'Altitude Audio On';  // Update the button text
+                    button.style.backgroundColor = 'green';  // Change the button color to green
+                } else {
+                    button.textContent = 'Altitude Audio Off';  // Update the button text
+                    button.style.backgroundColor = '';  // Reset the button color
+    }
+});
+
+function speakAltitude(altitude) {
+    if ("speechSynthesis" in window) {
+        const utterance = new SpeechSynthesisUtterance(`${altitude} meters.`);
+        speechSynthesis.speak(utterance);
+    }
+}
+
+// Convert seconds to HH:MM:SS format
+function formatTime(seconds) {
+    seconds = Number(seconds); // Ensure it's a number
+    let hrs = Math.floor(seconds / 3600);
+    let mins = Math.floor((seconds % 3600) / 60);
+    let secs = Math.floor(seconds % 60);
+    let ms = Math.round((seconds % 1) * 10); // Get the first decimal place of the milliseconds and round it
+
+    return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms}`;
+}
+
+// Modify updateDataTable function to read altitude every 20 measurements
+function updateDataTable(time, accelZ, baroAlt, maxAlt, gpsAlt, lat, lng, hdop, batV, ejS, sD) {
+    document.getElementById("time").textContent = formatTime(time.trim()); // Convert, format, and display time
+    document.getElementById('accelerationZ').textContent = accelZ;
+    document.getElementById('barometricAltitude').textContent = baroAlt;
+    document.getElementById('maxAltitude').textContent = maxAlt;
+    document.getElementById('gpsAltitude').textContent = gpsAlt;
+    document.getElementById('latitude').textContent = lat;
+    document.getElementById('longitude').textContent = lng;
+    document.getElementById('hdop').textContent = hdop;
+    document.getElementById('batteryvoltage').textContent = batV;
+    document.getElementById('ejectionstatus').textContent = ejS;
+    document.getElementById('sdstatus').textContent = sD;
+
+    // Increment measurement count
+    measurementCount++;
+    currentLat = parseFloat(lat);
+    currentLng = parseFloat(lng);
+
+    // Update marker position with the received latitude and longitude
+    marker.setLatLng([currentLat, currentLng]);
+
+    // Every 50 measurements, announce altitude if audio is enabled
+    if (isAudioEnabled && measurementCount % 50 === 0) {
+        speakAltitude(baroAlt);  // Uses barometric altitude for announcements
+    }
+}
+
+</script>
+
+</body>
+</html>
