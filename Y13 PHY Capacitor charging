@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Capacitor Charging Simulator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      background-color: #f5f5f5;
+      padding: 0.5em;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 1300px;
+      margin: auto;
+      overflow: hidden;
+      min-height: 800px;
+    }
+    .chart-container {
+      width: 100%;
+      position: relative;
+      height: 400px;
+      margin-top: 1em;
+    }
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+      background-color: #ffffff;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+    }
+    label {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    input[type="number"] {
+      width: 80px;
+      padding: 0.4em;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    button {
+      margin-top: 1em;
+      margin-left: 0.5em;
+      padding: 0.5em 1.6em;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #28a745;
+      color: white;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    table {
+      margin: 1em auto;
+      border-collapse: collapse;
+      font-size: 1rem;
+      width: 45%;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5em 1em;
+      text-align: center;
+    }
+    th {
+      background-color: #eee;
+    }
+    .chart-table-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: nowrap;
+      gap: 2em;
+      margin-top: 2em;
+      width: 100%;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Capacitor Charging Simulator</h2>
+    <label for="voltage">Voltage (V):</label>
+    <input type="number" id="voltage" value="5">
+    <label for="resistance">Resistance (Ω):</label>
+    <input type="number" id="resistance" value="1000">
+    <label for="capacitance">Capacitance (μF):</label>
+    <input type="number" id="capacitance" value="1000">
+    <button onclick="startSimulation()">Charge</button>
+    <button onclick="dischargeSimulation()">Discharge</button>
+    <br>
+
+    <div class="chart-table-container">
+      <table>
+        <thead>
+          <tr><th>Time (s)</th><th>Voltage (V)</th><th>Current (A)</th><th>Charge (%)</th></tr>
+        </thead>
+        <tbody id="data-table"></tbody>
+      </table>
+
+      <div class="chart-container">
+        <canvas id="chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('chart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Voltage (V)',
+            data: [],
+            borderColor: 'blue',
+            fill: false,
+            yAxisID: 'y',
+          },
+          {
+            label: 'Current (A)',
+            data: [],
+            borderColor: 'green',
+            fill: false,
+            yAxisID: 'y1',
+          }
+        ]
+      },
+      options: {
+        animation: false,
+        scales: {
+          x: { 
+            title: { display: true, text: 'Time (s)' },
+            ticks: {
+              stepSize: 0.5  // Force even increments
+            }
+          },
+          y: { title: { display: true, text: 'Voltage (V)' }, position: 'left' },
+          y1: { title: { display: true, text: 'Current (A)' }, position: 'right', grid: { drawOnChartArea: false } }
+        }
+      }
+    });
+
+    let simulationInterval;
+    let lastVoltage = 0;
+    let lastTime = 0;
+
+    function startSimulation() {
+      clearInterval(simulationInterval);
+      const V = parseFloat(document.getElementById('voltage').value);
+      const R = parseFloat(document.getElementById('resistance').value);
+      const C_uF = parseFloat(document.getElementById('capacitance').value);
+      const C = C_uF * 1e-6;
+      const tau = R * C;
+      const totalTime = tau * 5;
+      const stepSize = 0.1; // Even step size
+      const steps = Math.ceil(totalTime / stepSize);
+      const intervalMS = stepSize * 1000;
+      const pointsToRecord = [0, tau, 2*tau, 3*tau, 4*tau, 5*tau];
+
+      let t = 0;
+      let step = 0;
+      chart.data.labels = [];
+      chart.data.datasets[0].data = [];
+      chart.data.datasets[1].data = [];
+      document.getElementById('data-table').innerHTML = '';
+
+      simulationInterval = setInterval(() => {
+        const voltage = V * (1 - Math.exp(-t / tau));
+        const current = (V / R) * Math.exp(-t / tau);
+        const percent = (voltage / V) * 100;
+
+        chart.data.labels.push(t.toFixed(2));
+        chart.data.datasets[0].data.push(voltage);
+        chart.data.datasets[1].data.push(current);
+
+        if (pointsToRecord.some(pt => Math.abs(t - pt) < stepSize/2)) {
+          const row = `<tr><td>${t.toFixed(2)}</td><td>${voltage.toFixed(3)}</td><td>${current.toFixed(6)}</td><td>${percent.toFixed(1)}%</td></tr>`;
+          document.getElementById('data-table').innerHTML += row;
+        }
+
+        chart.update();
+        lastVoltage = voltage;
+        lastTime = t;
+        t += stepSize;
+        step++;
+        if (step > steps) clearInterval(simulationInterval);
+      }, intervalMS);
+    }
+
+    function dischargeSimulation() {
+      clearInterval(simulationInterval);
+      const R = parseFloat(document.getElementById('resistance').value);
+      const C_uF = parseFloat(document.getElementById('capacitance').value);
+      const C = C_uF * 1e-6;
+      const tau = R * C;
+      const totalTime = tau * 5;
+      const stepSize = 0.1; 
+      const steps = Math.ceil(totalTime / stepSize);
+      const intervalMS = stepSize * 1000;
+      const pointsToRecord = [0, tau, 2*tau, 3*tau, 4*tau, 5*tau];
+
+      let t = 0;
+      let step = 0;
+      const V0 = lastVoltage;
+
+      simulationInterval = setInterval(() => {
+        const time = lastTime + t;
+        const voltage = V0 * Math.exp(-t / tau);
+        const current = -voltage / R;
+        const percent = (voltage / V0) * 100;
+
+        chart.data.labels.push(time.toFixed(2));
+        chart.data.datasets[0].data.push(voltage);
+        chart.data.datasets[1].data.push(current);
+
+        if (pointsToRecord.some(pt => Math.abs(t - pt) < stepSize/2)) {
+          const row = `<tr><td>${time.toFixed(2)}</td><td>${voltage.toFixed(3)}</td><td>${current.toFixed(6)}</td><td>${percent.toFixed(1)}%</td></tr>`;
+          document.getElementById('data-table').innerHTML += row;
+        }
+
+        chart.update();
+        t += stepSize;
+        step++;
+        if (step > steps) clearInterval(simulationInterval);
+      }, intervalMS);
+    }
+  </script>
+</body>
+</html>
