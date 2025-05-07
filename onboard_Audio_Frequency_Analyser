@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microphone Recorder</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Helvetica, sans-serif;
+            display: flex;
+            background-color: #f4f4f4;
+            color: #ddd;
+        }
+        #dataContainer {
+            width: 20%;
+            padding: 20px;
+            background-color: #222;
+            border-right: 2px solid #444;
+        }
+        h1 {
+            color: #fff;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        #audioData, #peakFrequency, #peakAmplitude {
+            font-size: 20px;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #333;
+            color: white;
+            width: 100%;
+            border-radius: 5px;
+        }
+        #status {
+            color: green;
+            font-size: 18px;
+        }
+
+        #chart-container {
+            width: 80%;
+            height: 100%;
+            margin: 0 auto;
+        }
+        canvas {
+            width: 100% !important;
+
+        }
+    </style>
+</head>
+<body>
+    <div id="dataContainer">
+        <h1>Audio Spectrum</h1>
+        <p id="status">Connecting to microphone...</p>
+        <div id="peakFrequency">Peak Frequency Bin: Waiting...</div>
+        <div id="peakAmplitude">Peak Amplitude: Waiting...</div>
+    </div>
+
+    <div id="chart-container">
+        <canvas id="audioGraph"></canvas>
+    </div>
+
+    <script>
+        // Check if the browser supports accessing microphone
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(function(stream) {
+                    document.getElementById('status').textContent = "Microphone connected";
+
+                    // Create an AudioContext and analyser node
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const analyser = audioContext.createAnalyser();
+                    const microphone = audioContext.createMediaStreamSource(stream);
+
+                    // Connect the microphone to the analyser
+                    microphone.connect(analyser);
+
+                    // Set up the analyser to get frequency data
+                    analyser.fftSize = 2048; // Use a large fftSize for finer frequency resolution
+                    const bufferLength = analyser.frequencyBinCount;
+                    const dataArray = new Uint8Array(bufferLength);
+
+                    // Frequency range setup
+                    const sampleRate = audioContext.sampleRate;
+                    const maxFreq = 2000; // Maximum frequency to display in Hz
+                    const numDataPoints = 100; // Limit to 100 bins on the x-axis
+                    const maxBinIndex = Math.floor((maxFreq / sampleRate) * analyser.fftSize);
+
+                    // Calculate frequency per bin more precisely
+                    const labels = Array.from({ length: numDataPoints }, (_, i) => 
+                        Math.round((i * maxFreq) / numDataPoints)
+                    );
+
+                    // Set up Chart.js for the graph
+                    const ctx = document.getElementById('audioGraph').getContext('2d');
+                    const chart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels, // Frequency labels
+                            datasets: [{
+                                label: 'Amplitude',
+                                data: new Array(numDataPoints).fill(0),
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Frequency (Hz)'
+                                    }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    max: 300, // Set y-axis maximum to 300
+                                    title: {
+                                        display: true,
+                                        text: 'Amplitude'
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    // Update the audio data and graph
+                    function updateAudioData() {
+                        analyser.getByteFrequencyData(dataArray);
+
+                        // Extract the first maxBinIndex bins for display within the range
+                        const dataSlice = Array.from(dataArray.slice(0, maxBinIndex));
+                        chart.data.datasets[0].data = dataSlice;
+                        chart.update();
+
+                        // Find peak frequency within the displayed range
+                        let peakAmplitude = 0;
+                        let peakBinIndex = 0;
+                        for (let i = 0; i < maxBinIndex; i++) {
+                            if (dataSlice[i] > peakAmplitude) {
+                                peakAmplitude = dataSlice[i];
+                                peakBinIndex = i;
+                            }
+                        }
+
+                        // Calculate the actual frequency in Hz of the peak bin
+                        const peakFrequency = Math.round((peakBinIndex / maxBinIndex) * maxFreq);
+
+                        // Update peak frequency and amplitude display
+                        document.getElementById('peakFrequency').textContent = 'Peak Frequency: ' + peakFrequency + ' Hz';
+                        document.getElementById('peakAmplitude').textContent = 'Peak Amplitude: ' + peakAmplitude;
+
+                        // Call the update function again to keep it going
+                        requestAnimationFrame(updateAudioData);
+                    }
+
+                    // Start updating the audio data
+                    updateAudioData();
+                })
+                .catch(function(err) {
+                    document.getElementById('status').textContent = "Error accessing microphone: " + err;
+                    document.getElementById('status').style.color = 'red';
+                });
+        } else {
+            alert('Your browser does not support audio input.');
+        }
+    </script>
+</body>
+</html>
