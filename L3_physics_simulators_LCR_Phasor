@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RLC Circuit Simulator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+        display: flex;
+        margin: 0;
+        font-family: Arial, sans-serif;
+        height: 100vh;
+        background-color: #f4f4f4;
+    }
+    #input-container {
+        width: 40%;
+        padding: 20px;
+        border-right: 2px solid #ccc;
+        display: flex;
+        flex-direction: column;
+        background-color: #fff;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    }
+    #input-table, #results-table {
+        width: 100%;
+        padding-bottom: 10px;
+    }
+    #input-table table, #results-table table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    #input-table th, #input-table td, #results-table th, #results-table td {
+        padding: 5px 10px; /* Reduced padding */
+        text-align: left;
+        font-size: 20px; /* Set text size to 20px */
+        line-height: 1.2; /* Reduced line height */
+    }
+    #output-container {
+        width: 60%;
+        display: flex;
+        padding: 20px;
+        flex-wrap: wrap;
+    }
+    #phasor-diagram, #impedance-diagram {
+        width: 100%;
+        padding: 10px;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+    canvas {
+        width: 100%;
+        height: auto;
+    }
+    .slider {
+        width: 100%;
+        margin: 15px 0;
+    }
+    .slider-label {
+        font-size: 18px;
+        text-align: center;
+    }
+    .slider-value {
+        font-weight: bold;
+    }
+    h3 {
+        margin-bottom: 10px;
+        color: #333;
+        font-size: 20px; /* Set h3 text size to 20px */
+    }
+</style>
+</head>
+<body>
+    <div id="input-container">
+        <div id="input-table">
+            <h3>LCR Phasor Simulator</h3>
+            <label for="frequencySlider" class="slider-label">Frequency:<span id="frequencyValue" class="slider-value">50 Hz</span></label>
+            <input type="range" id="frequencySlider" class="slider" min="1" max="2000" value="50" step="1" oninput="updateSimulation()">
+
+            <label for="voltageSlider" class="slider-label">Voltage:<span id="voltageValue" class="slider-value">230 V</span></label>
+            <input type="range" id="voltageSlider" class="slider" min="1" max="500" value="230" step="1" oninput="updateSimulation()">
+
+            <label for="capacitanceSlider" class="slider-label">Capacitance:<span id="capacitanceValue" class="slider-value">10 uF</span></label>
+            <input type="range" id="capacitanceSlider" class="slider" min="1" max="500" value="10" step="1" oninput="updateSimulation()">
+
+            <label for="inductanceSlider" class="slider-label">Inductance:<span id="inductanceValue" class="slider-value">50 mH</span></label>
+            <input type="range" id="inductanceSlider" class="slider" min="1" max="500" value="50" step="1" oninput="updateSimulation()">
+            
+            <label for="resistanceSlider" class="slider-label">Resistance:<span id="resistanceValue" class="slider-value">100 Ω</span></label>
+            <input type="range" id="resistanceSlider" class="slider" min="1" max="500" value="100" step="1" oninput="updateSimulation()">
+        </div>
+        <div id="results-table">
+            <h3>Results</h3>
+            <table>
+                <tr>
+                    <th>Result</th>
+                    <th>Value</th>
+                </tr>
+                <tr>
+                    <td>Capacitor Reactance (Ω)</td>
+                    <td id="xc">-</td>
+                </tr>
+                <tr>
+                    <td>Inductor Reactance (Ω)</td>
+                    <td id="xl">-</td>
+                </tr>
+                <tr>
+                    <td>Maximum Current (A)</td>
+                    <td id="imax">-</td>
+                </tr>
+                <tr>
+                    <td>Resonant Frequency (Hz)</td>
+                    <td id="fres">-</td>
+                </tr>
+                <tr>
+                    <td>Lead/Lag Angle (°)</td>
+                    <td id="angle">-</td>
+                </tr>
+                <tr>
+                    <td>Lead/Lag</td>
+                    <td id="leadlag">-</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div id="output-container">
+        <div id="phasor-diagram">
+            <canvas id="phasorCanvas" width="400" height="400"></canvas>
+        </div>
+        <div id="impedance-diagram">
+            <canvas id="impedanceCanvas" width="400" height="400"></canvas>
+        </div>
+    </div>
+
+    <script>
+        function updateSimulation() {
+            const f = parseFloat(document.getElementById("frequencySlider").value);
+            const v = parseFloat(document.getElementById("voltageSlider").value);
+            const c = parseFloat(document.getElementById("capacitanceSlider").value) * 1e-6;
+            const l = parseFloat(document.getElementById("inductanceSlider").value) * 1e-3;
+            const r = parseFloat(document.getElementById("resistanceSlider").value);
+
+            const omega = 2 * Math.PI * f;
+            const xc = 1 / (omega * c);
+            const xl = omega * l;
+            const xNet = xl - xc;
+            const z = Math.sqrt(r ** 2 + xNet ** 2);
+            const imax = v / z;
+            const fres = 1 / (2 * Math.PI * Math.sqrt(l * c));
+            const angle = Math.atan(xNet / r) * (180 / Math.PI);
+
+            document.getElementById("xc").innerText = xc.toFixed(2);
+            document.getElementById("xl").innerText = xl.toFixed(2);
+            document.getElementById("imax").innerText = imax.toFixed(2);
+            document.getElementById("fres").innerText = fres.toFixed(2);
+            document.getElementById("angle").innerText = angle.toFixed(2);
+
+            // Displaying Lead/Lag condition
+            const leadlag = angle > 0 ? "Leading" : "Laging";
+            document.getElementById("leadlag").innerText = leadlag;
+
+            // Update the displayed values next to the sliders
+            document.getElementById("frequencyValue").innerText = `${f} Hz`;
+            document.getElementById("voltageValue").innerText = `${v} V`;
+            document.getElementById("capacitanceValue").innerText = `${document.getElementById("capacitanceSlider").value} uF`;
+            document.getElementById("inductanceValue").innerText = `${document.getElementById("inductanceSlider").value} mH`;
+            document.getElementById("resistanceValue").innerText = `${document.getElementById("resistanceSlider").value} Ω`;
+
+            updatePhasorChart(v, r, xc, xl, angle);
+            updateImpedanceDiagram(r, xc, xl, xNet, z);
+        }
+
+        function updatePhasorChart(v, r, xc, xl, angle) {
+            const canvas = document.getElementById("phasorCanvas");
+            const ctx = canvas.getContext("2d");
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            const scale = Math.min(canvas.width, canvas.height) / (2 * Math.max(r, xl, xc));
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw axes
+            ctx.strokeStyle = "#ccc";
+            ctx.beginPath();
+            ctx.moveTo(0, centerY);
+            ctx.lineTo(canvas.width, centerY);
+            ctx.moveTo(centerX, 0);
+            ctx.lineTo(centerX, canvas.height);
+            ctx.stroke();
+
+            // Draw phasors with thicker lines
+            function drawPhasor(x, y, color) {
+                ctx.lineWidth = 6; // Increased line thickness
+                ctx.strokeStyle = color;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(centerX + x * scale, centerY - y * scale);
+                ctx.stroke();
+            }
+
+            drawPhasor(r, 0, "red"); // Resistor
+            drawPhasor(0, xl, "blue"); // Inductor
+            drawPhasor(0, -xc, "green"); // Capacitor
+            drawPhasor(r, xl - xc, "purple"); // Supply voltage
+        }
+
+        function updateImpedanceDiagram(r, xc, xl, xNet, z) {
+            const canvas = document.getElementById("impedanceCanvas");
+            const ctx = canvas.getContext("2d");
+            
+            let centerY = canvas.height / 2; // Default to center
+
+            const scale = Math.min(canvas.width, canvas.height) / (2 * Math.max(r, xl, xc, z));
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw impedance triangle with xNet instead of xl
+            ctx.strokeStyle = "#000";
+            ctx.beginPath();
+            ctx.moveTo(0, centerY);  // Align the triangle's bottom-left corner with the left edge
+            ctx.lineTo(r * scale, centerY);
+            ctx.lineTo(r * scale, centerY - xNet * scale); // Using xNet instead of xl
+            ctx.lineTo(0, centerY);
+            ctx.closePath();
+            ctx.stroke();
+
+            // Labeling
+            ctx.font = "18px Arial";
+            ctx.fillStyle = "black";
+            ctx.fillText(`R = ${r} Ω`, r * scale / 2, centerY + 10);
+            ctx.fillText(`X(net) = ${xNet.toFixed(2)} Ω`, r * scale + 10, centerY - xNet * scale / 2);
+            ctx.fillText(`Z = ${z.toFixed(2)} Ω`, r * scale / 2, centerY - xNet * scale - 10);
+        }
+
+        updateSimulation();
+    </script>
+</body>
+</html>
