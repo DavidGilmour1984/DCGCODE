@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tube Resonance Simulator</title>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      background-color: #f5f5f5;
+      padding: 0.5em;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      padding: 1.5em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 1300px;
+      margin: auto;
+      overflow: hidden;
+    }
+    canvas {
+      background-color: #ffffff;
+      border: none;
+      margin: 0.5em;
+      border-radius: 12px;
+      width: 100%;
+      height: 300px;
+    }
+    label {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    select, input[type="number"] {
+      width: 100px;
+      padding: 0.4em;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      margin-right: 10px;
+    }
+    button {
+      margin-top: 1em;
+      padding: 0.5em 1.6em;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #28a745;
+      color: white;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    button:disabled {
+      background-color: #777;
+      color: #ccc;
+      cursor: not-allowed;
+    }
+    #resonanceInfo {
+      margin-top: 1em;
+      font-weight: bold;
+      font-size: 1.2em;
+    }
+    .harmonic-buttons {
+      margin-top: 1em;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Tube Resonance Simulator</h2>
+    <div>
+      <label for="tubeType">Tube Type:</label>
+      <select id="tubeType" onchange="updateHarmonics()">
+        <option value="open-open">Open-Open</option>
+        <option value="open-closed">Open-Closed</option>
+        <option value="closed-closed">Closed-Closed</option>
+      </select>
+
+      <label for="length">Tube Length (m):</label>
+      <input type="number" id="length" value="1" min="0.1" step="0.01">
+
+      <label for="speed">Speed of Sound (m/s):</label>
+      <input type="number" id="speed" value="2" min="0.1" step="0.1">
+
+      <div class="harmonic-buttons">
+        <button onclick="selectHarmonic(1)">1st Harmonic</button>
+        <button onclick="selectHarmonic(2)" id="harmonic2">2nd Harmonic</button>
+        <button onclick="selectHarmonic(3)">3rd Harmonic</button>
+        <button onclick="selectHarmonic(4)" id="harmonic4">4th Harmonic</button>
+        <button onclick="selectHarmonic(5)">5th Harmonic</button>
+        <button onclick="selectHarmonic(6)" id="harmonic6">6th Harmonic</button>
+        <button onclick="selectHarmonic(7)">7th Harmonic</button>
+        <button onclick="selectHarmonic(8)" id="harmonic8">8th Harmonic</button>
+      </div>
+
+      <div id="resonanceInfo"></div>
+    </div>
+
+    <canvas id="simCanvas" width="1200" height="300"></canvas>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("simCanvas");
+    const ctx = canvas.getContext("2d");
+    let animationId;
+    const particles = [];
+    const particleCount = 1000;
+    let selectedHarmonic = 1;
+    let frequency = 0;
+
+    function createParticles() {
+      particles.length = 0;
+      for (let i = 0; i < particleCount; i++) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        particles.push({ x, y, baseX: x, baseY: y });
+      }
+    }
+
+    function displayResonantFrequency(tubeType, speed, length) {
+      let fundamental;
+      if (tubeType === "open-open" || tubeType === "closed-closed") {
+        fundamental = speed / (2 * length);
+      } else if (tubeType === "open-closed") {
+        fundamental = speed / (4 * length);
+      }
+      frequency = fundamental * selectedHarmonic;
+      document.getElementById("resonanceInfo").innerText =
+        `Current Frequency: ${frequency.toFixed(2)} Hz`;
+    }
+
+    function selectHarmonic(harmonicNumber) {
+      selectedHarmonic = harmonicNumber;
+      startSimulation(); // Restart the simulation with the new harmonic
+    }
+
+    function updateHarmonics() {
+      const tubeType = document.getElementById("tubeType").value;
+      const evenHarmonics = tubeType === "open-closed";
+
+      // Disable even harmonic buttons for "Open-Closed" and blackout the styling
+      const evenButtons = ["harmonic2", "harmonic4", "harmonic6", "harmonic8"];
+      evenButtons.forEach(buttonId => {
+        const button = document.getElementById(buttonId);
+        if (evenHarmonics) {
+          button.disabled = true;
+          button.style.backgroundColor = "#777";  // Blackout style
+          button.style.color = "#ccc";            // Disabled text color
+        } else {
+          button.disabled = false;
+          button.style.backgroundColor = "#28a745"; // Normal style
+          button.style.color = "white";             // Normal text color
+        }
+      });
+
+      // If the selected harmonic is even and "Open-Closed" is selected, select the previous harmonic
+      if (evenHarmonics && selectedHarmonic % 2 === 0) {
+        selectedHarmonic -= 1;
+        startSimulation(); // Restart the simulation with the corrected harmonic
+      }
+    }
+
+    function startSimulation() {
+      cancelAnimationFrame(animationId);
+
+      const tubeType = document.getElementById("tubeType").value;
+      const length = parseFloat(document.getElementById("length").value);
+      const speed = parseFloat(document.getElementById("speed").value);
+
+      displayResonantFrequency(tubeType, speed, length);
+
+      const pixelsPerMeter = canvas.width / length;
+      createParticles();
+
+      let time = 0;
+
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Draw the tube borders depending on the tube type
+        const tubeStartX = 0;
+        const tubeEndX = canvas.width;
+
+        // Always draw the top and bottom borders
+        ctx.fillStyle = "black";
+        ctx.fillRect(tubeStartX, 0, tubeEndX, 5); // Top border
+        ctx.fillRect(tubeStartX, canvas.height - 5, tubeEndX, 5); // Bottom border
+
+        // Draw the tube ends based on the tube type
+        if (tubeType === "open-open") {
+          // Open-Open: No borders on either end
+        } else if (tubeType === "open-closed") {
+          // Open-Closed: No border on open end (right), border on closed end (left)
+          ctx.fillRect(tubeStartX, 0, 5, canvas.height); // Left border (closed)
+        } else if (tubeType === "closed-closed") {
+          // Closed-Closed: Border on both ends
+          ctx.fillRect(tubeStartX, 0, 5, canvas.height); // Left border (closed)
+          ctx.fillRect(tubeEndX - 5, 0, 5, canvas.height); // Right border (closed)
+        }
+
+        // Draw the resonating particles
+        for (let p of particles) {
+          const xMeters = p.baseX / pixelsPerMeter;
+
+          let envelope = 0;
+
+          // Logic for different tube types and harmonics
+          if (tubeType === "open-open") {
+            // Open-Open tube: Antinodes at the ends, nodes at harmonic positions
+            envelope = Math.cos(selectedHarmonic * Math.PI * xMeters / length);
+          } else if (tubeType === "closed-closed") {
+            // Closed-Closed tube: Nodes at the ends, antinode at harmonic positions
+            envelope = Math.sin(selectedHarmonic * Math.PI * xMeters / length);
+          } else if (tubeType === "open-closed") {
+            // Open-Closed tube: Node at closed end, antinode at open end
+            envelope = Math.sin(selectedHarmonic * Math.PI * xMeters / (2 * length));
+          }
+
+          const wave = envelope * 30 * Math.sin(2 * Math.PI * frequency * time);
+          const newX = p.baseX + wave;
+
+          ctx.beginPath();
+          ctx.arc(newX, p.baseY, 2, 0, 2 * Math.PI);
+          ctx.fill();
+        }
+
+        time += 0.015;
+        animationId = requestAnimationFrame(animate);
+      }
+
+      animate();
+    }
+  </script>
+</body>
+</html>
