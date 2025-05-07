@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COM Port Connection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        table {
+            border-collapse: collapse;
+            margin: 20px auto;
+        }
+        td {
+            width: 40px;  /* Increased width */
+            height: 40px; /* Increased height */
+            border: 1px solid black;
+            vertical-align: middle;
+            font-size: 12px;
+            color: #000; /* Text color */
+        }
+        #status {
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        #controlPanel {
+            margin: 20px;
+        }
+        #thresholdInput {
+            width: 60px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Connect to COM Port</h1>
+    <button id="connectBtn">Connect to COM Port</button>
+    <button id="calibrateBtn" style="margin-top: 10px;">White Calibration</button>
+    <div id="status"></div>
+    
+    <table id="dataTable">
+        <tbody>
+            <!-- Dynamically filled rows -->
+        </tbody>
+    </table>
+
+    <div id="controlPanel">
+        <input type="number" id="thresholdInput" placeholder="Threshold Value">
+        <button id="startPauseBtn">Start/Pause</button>
+        <button id="clearBtn">Clear</button>
+    </div>
+
+    <table id="timingTable">
+        <tbody>
+            <!-- Dynamically filled timing rows -->
+        </tbody>
+    </table>
+
+    <script>
+        const connectBtn = document.getElementById('connectBtn');
+        const calibrateBtn = document.getElementById('calibrateBtn');
+        const statusDiv = document.getElementById('status');
+        const dataTable = document.getElementById('dataTable');
+        const timingTable = document.getElementById('timingTable');
+        const startPauseBtn = document.getElementById('startPauseBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const thresholdInput = document.getElementById('thresholdInput');
+
+        let port;
+        let csvData = []; // To store the current CSV data
+        let calibrationFactors = Array(80).fill(0); // To store unique calibration factors for each cell
+        let isTiming = false; // Flag to indicate if timing is active
+        let timingData = Array(80).fill(0); // Array to store timing values, now 80 entries
+
+        connectBtn.addEventListener('click', async () => {
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+                statusDiv.textContent = 'Connected to COM Port';
+                readSerialData();
+            } catch (error) {
+                statusDiv.textContent = 'Failed to connect: ' + error.message;
+            }
+        });
+
+        calibrateBtn.addEventListener('click', () => {
+            calibrateValues();
+        });
+
+        startPauseBtn.addEventListener('click', () => {
+            isTiming = !isTiming; // Toggle timing
+            if (isTiming) {
+                startTiming();
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            timingData.fill(0); // Reset timing data
+            updateTimingTable();
+        });
+
+        async function readSerialData() {
+            const decoder = new TextDecoderStream();
+            const readableStreamClosed = port.readable.pipeTo(decoder.writable);
+            const reader = decoder.readable.getReader();
+
+            let buffer = ''; // Buffer to store incoming data
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                // Append new data to the buffer
+                buffer += value;
+
+                // Process the buffer for complete CSV data
+                let lines = buffer.split('\n'); // Split by new line
+                buffer = lines.pop(); // Keep the last partial line in the buffer
+
+                for (let line of lines) {
+                    if (line) {
+                        const data = line.trim().split(',');
+                        
+                        // Validate the length of the incoming data
+                        if (data.length >= 80) {
+                            csvData = data.slice(0, 80); // Store the first 80 values
+                            updateTable(csvData);
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateTable(data) {
+            dataTable.innerHTML = ''; // Clear previous content
+            const rows = 8; // Set number of rows to 8
+            const cols = 10; // Set number of columns to 10
+
+            // Create table cells
+            for (let i = 0; i < rows; i++) {
+                const tr = document.createElement('tr');
+                for (let j = cols - 1; j >= 0; j--) { // Fill from right to left
+                    const td = document.createElement('td');
+                    const index = (j * rows + i);
+                    let value = 0; // Default value
+                    if (index < data.length) {
+                        value = Number(data[index]) + calibrationFactors[index]; // Apply the calibration factor
+                        td.textContent = value.toFixed(1); // Display the value with 1 decimal place
+                    } else {
+                        td.textContent = ''; // Empty cell
+                    }
+
+                    // Calculate grayscale based on the value (0 to 800)
+                    const grayscale = Math.min(Math.round((value / 800) * 255), 255); // Ensure value does not exceed 255
+                    td.style.backgroundColor = `rgb(${grayscale}, ${grayscale}, ${grayscale})`; // Set background color
+                    tr.appendChild(td);
+                }
+                dataTable.appendChild(tr);
+            }
+        }
+
+        function updateTimingTable() {
+            timingTable.innerHTML = ''; // Clear previous content
+            const rows = 8; // Set number of rows to 8
+            const cols = 10; // Set number of columns to 10
+
+            // Create timing table cells (flipped horizontally)
+            for (let i = 0; i < rows; i++) {
+                const tr = document.createElement('tr');
+                for (let j = cols - 1; j >= 0; j--) { // Fill from right to left for timing
+                    const td = document.createElement('td');
+                    const index = (j * rows + i);
+                    const value = timingData[index];
+
+                    td.textContent = value.toFixed(1); // Display time with 1 decimal place
+                    td.style.backgroundColor = getGreenColor(value); // Set the background color based on the value
+                    tr.appendChild(td);
+                }
+                timingTable.appendChild(tr);
+            }
+        }
+
+        function getGreenColor(value) {
+            // Normalize value to a range of 0 to 1 for color scaling
+            const maxValue = Math.max(...timingData); // Get the maximum value in timingData
+            const normalizedValue = maxValue > 0 ? value / maxValue : 0; // Prevent division by zero
+
+            // Calculate RGB values for the green color
+            const green = Math.round(normalizedValue * 255); // Darker green for higher values
+            return `rgb(0, ${green}, 0)`; // Return RGB color string
+        }
+
+        function startTiming() {
+            const thresholdValue = parseFloat(thresholdInput.value);
+            if (isNaN(thresholdValue)) {
+                alert('Please enter a valid threshold value.');
+                return;
+            }
+
+            const interval = setInterval(() => {
+                if (!isTiming) {
+                    clearInterval(interval);
+                    return; // Stop timing if not active
+                }
+
+                csvData.forEach((value, index) => {
+                    const numericValue = Number(value);
+                    const calibratedValue = numericValue + calibrationFactors[index]; // Calculate the calibrated value
+
+                    // Increment timing if the calibrated value is below the threshold
+                    if (calibratedValue >= 5 && calibratedValue < thresholdValue) {
+                        timingData[index] += 0.1; // Increment time in seconds
+                    }
+                });
+
+                updateTimingTable(); // Update the timing table
+            }, 100); // Update every 100 milliseconds
+        }
+
+        function calibrateValues() {
+            if (csvData.length === 0) {
+                alert('No data available for calibration.');
+                return;
+            }
+
+            // Convert all CSV values to numbers
+            const numericValues = csvData.map(Number);
+            const maxValue = Math.max(...numericValues);
+
+            // Set the calibration factors based on the maximum CSV value
+            calibrationFactors = numericValues.map(value => maxValue - value); // Update calibration factors
+
+            // Update the table with current values + calibration factors
+            updateTable(csvData);
+        }
+    </script>
+</body>
+</html>
