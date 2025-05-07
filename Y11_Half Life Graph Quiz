@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Half-Life Quiz</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      padding: 2em;
+      background-color: #f5f5f5;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 600px;
+      margin: auto;
+    }
+    button {
+      margin: 1em;
+      padding: 0.5em 1.2em;
+      font-size: 1.2rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background-color: #007BFF;
+      color: white;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .hidden {
+      display: none;
+    }
+    #working, #answer {
+      margin-top: 1em;
+      font-size: 1.2em;
+      color: #333;
+    }
+    #feedback {
+      margin-top: 1em;
+      font-size: 1.2em;
+    }
+    #question {
+      font-size: 1.2em;
+      color: #333;
+      margin-top: 1.5em;
+    }
+    select, #answerInput {
+      font-size: 1.2em;
+      padding: 0.25em;
+      margin-top: 1em;
+      border-radius: 8px;
+      width: 200px;
+    }
+    canvas {
+      margin-bottom: 2em;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Half-Life Graph Quiz</h2>
+    <canvas id="decayChart"></canvas>
+    <div id="question"></div>
+    <input type="text" id="answerInput" placeholder="Answer" />
+    <select id="unitSelect">
+      <option value="" disabled selected>Select unit</option>
+      <option value="g">g</option>
+      <option value="years">years</option>
+      <option value="half-lives">half-lives</option>
+    </select>
+    <button onclick="checkAnswer()">Submit Answer</button>
+    <div id="feedback" class="hidden"></div>
+    <div id="tally">Correct answers: <span id="correctCount">0</span> / <span id="totalCount">0</span></div>
+  </div>
+
+<script>
+let current = {};
+let correctCount = 0;
+let totalCount = 0;
+let decayChart = null;
+
+function getRandom(min, max) {
+  return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
+function generateDecayData(halfLife, startMass, timePeriod) {
+  const timeSteps = [];
+  const massValues = [];
+  
+  for (let t = 0; t <= timePeriod; t++) {
+    const mass = startMass * Math.pow(0.5, t / halfLife);
+    timeSteps.push(t);
+    massValues.push(mass);
+  }
+
+  return { timeSteps, massValues };
+}
+
+function createDecayChart(timeSteps, massValues) {
+  const ctx = document.getElementById('decayChart').getContext('2d');
+
+  if (decayChart) {
+    decayChart.destroy();
+  }
+
+  decayChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: timeSteps,
+      datasets: [{
+        label: 'Mass Over Time',
+        data: massValues,
+        borderColor: '#007BFF',
+        backgroundColor: 'rgba(0, 123, 255, 0.2)',
+        borderWidth: 2,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { 
+          title: {
+            display: true,
+            text: 'Time (years)'
+          }
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Mass (g)'
+          },
+          min: 0
+        }
+      }
+    }
+  });
+}
+
+function generateQuestion() {
+  document.getElementById('feedback').classList.add('hidden');
+
+  const startMass = getRandom(50, 200); // grams
+  const halfLife = getRandom(2, 10); // years (integer)
+  const maxHalfLives = 5;
+  const timePeriod = halfLife * maxHalfLives;
+
+  const { timeSteps, massValues } = generateDecayData(halfLife, startMass, timePeriod);
+  createDecayChart(timeSteps, massValues);
+
+  const rand = Math.random();
+  if (rand < 0.33) {
+    // Type 1: Find half-life
+    const question = `A sample starts with ${startMass}g. The graph above shows the mass over time. What is the sample's half-life?`;
+    current = { type: "findHalfLife", question, correctAnswer: halfLife, correctUnit: "years" };
+  } else if (rand < 0.66) {
+    // Type 2: Find number of half-lives
+    const numHalfLives = getRandom(1, maxHalfLives);
+    const remainingMass = startMass * Math.pow(0.5, numHalfLives);
+    const question = `A sample starts with ${startMass}g and decays to approximately ${remainingMass.toFixed(1)}g. How many half-lives have passed?`;
+    current = { type: "findHalfLivesPassed", question, correctAnswer: numHalfLives, correctUnit: "half-lives" };
+  } else {
+    // Type 3: Find remaining mass after N half-lives
+    const numHalfLives = getRandom(1, maxHalfLives);
+    const remainingMass = startMass * Math.pow(0.5, numHalfLives);
+    const question = `A sample starts with ${startMass}g. How much mass remains after ${numHalfLives} half-lives?`;
+    current = { type: "findRemainingMass", question, correctAnswer: remainingMass.toFixed(1), correctUnit: "g" };
+  }
+
+  document.getElementById('question').innerText = current.question;
+}
+
+function checkAnswer() {
+  const answerInput = document.getElementById('answerInput').value.trim();
+  const unitSelect = document.getElementById('unitSelect').value;
+  const feedback = document.getElementById('feedback');
+
+  const entered = parseFloat(answerInput);
+  const correct = parseFloat(current.correctAnswer);
+
+  let isCorrect = false;
+
+  if (!isNaN(entered)) {
+    if (current.type === "findRemainingMass") {
+      // allow small margin for 1dp
+      isCorrect = Math.abs(entered - correct) <= 0.2;
+    } else {
+      // must match exactly for integers
+      isCorrect = entered === correct;
+    }
+  }
+
+  totalCount++;
+  if (isCorrect && unitSelect === current.correctUnit) {
+    correctCount++;
+    feedback.textContent = `✅ Correct! Answer: ${current.correctAnswer} ${current.correctUnit}`;
+    feedback.style.color = "#5bc0de";
+  } else {
+    feedback.textContent = `❌ Incorrect. Correct answer: ${current.correctAnswer} ${current.correctUnit}`;
+    feedback.style.color = "#d9534f";
+  }
+
+  document.getElementById('correctCount').innerText = correctCount;
+  document.getElementById('totalCount').innerText = totalCount;
+
+  feedback.classList.remove('hidden');
+
+  setTimeout(function() {
+    generateQuestion();
+    document.getElementById('answerInput').value = '';
+    document.getElementById('unitSelect').selectedIndex = 0;
+  }, 2500);
+}
+
+generateQuestion();
+</script>
+</body>
+</html>
