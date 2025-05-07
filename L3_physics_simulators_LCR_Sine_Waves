@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RLC Circuit Simulator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            display: flex;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            height: 100vh;
+        }
+        #input-container {
+            width: 50%;
+            padding: 10px;
+            border-right: 2px solid #ccc;
+            display: flex;
+            flex-direction: column;
+        }
+        #input-table, #results-table {
+            width: 100%;
+            padding-bottom: 10px;
+        }
+        #input-table table, #results-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #input-table th, #input-table td, #results-table th, #results-table td {
+            padding: 8px;
+            text-align: left;
+        }
+        #output-container {
+            width: 50%;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        #sine-waves {
+            flex: 2;
+            padding: 10px;
+        }
+        canvas {
+            width: 100%;
+            height: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div id="input-container">
+        <div id="input-table">
+            <h3>Input Parameters</h3>
+            <table>
+                <tr>
+                    <th>Parameter</th>
+                    <th>Value</th>
+                </tr>
+                <tr>
+                    <td>Frequency (Hz)</td>
+                    <td><input type="number" id="frequency" value="50" oninput="updateSimulation()"></td>
+                </tr>
+                <tr>
+                    <td>Voltage (V)</td>
+                    <td><input type="number" id="voltage" value="230" oninput="updateSimulation()"></td>
+                </tr>
+                <tr>
+                    <td>Capacitance (uF)</td>
+                    <td><input type="number" id="capacitance" value="10" oninput="updateSimulation()"></td>
+                </tr>
+                <tr>
+                    <td>Inductance (mH)</td>
+                    <td><input type="number" id="inductance" value="50" oninput="updateSimulation()"></td>
+                </tr>
+                <tr>
+                    <td>Resistance (Ω)</td>
+                    <td><input type="number" id="resistance" value="100" oninput="updateSimulation()"></td>
+                </tr>
+            </table>
+        </div>
+        <div id="results-table">
+            <h3>Results</h3>
+            <table>
+                <tr>
+                    <th>Result</th>
+                    <th>Value</th>
+                </tr>
+                <tr>
+                    <td>Capacitor Reactance (Ω)</td>
+                    <td id="xc">-</td>
+                </tr>
+                <tr>
+                    <td>Inductor Reactance (Ω)</td>
+                    <td id="xl">-</td>
+                </tr>
+                <tr>
+                    <td>Maximum Current (A)</td>
+                    <td id="imax">-</td>
+                </tr>
+                <tr>
+                    <td>Resonant Frequency (Hz)</td>
+                    <td id="fres">-</td>
+                </tr>
+                <tr>
+                    <td>Lead/Lag Angle (°)</td>
+                    <td id="angle">-</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div id="output-container">
+        <div id="sine-waves">
+            <canvas id="sineWaveChart"></canvas>
+        </div>
+    </div>
+    <script>
+        let sineWaveChart;
+
+        function updateSimulation() {
+            const f = parseFloat(document.getElementById("frequency").value);
+            const v = parseFloat(document.getElementById("voltage").value);
+            const c = parseFloat(document.getElementById("capacitance").value) * 1e-6;
+            const l = parseFloat(document.getElementById("inductance").value) * 1e-3;
+            const r = parseFloat(document.getElementById("resistance").value);
+
+            const omega = 2 * Math.PI * f;
+            const xc = 1 / (omega * c);
+            const xl = omega * l;
+            const z = Math.sqrt(r ** 2 + (xl - xc) ** 2);
+            const imax = v / z;
+            const fres = 1 / (2 * Math.PI * Math.sqrt(l * c));
+            const angle = Math.atan((xl - xc) / r) * (180 / Math.PI);
+
+            document.getElementById("xc").innerText = xc.toFixed(2);
+            document.getElementById("xl").innerText = xl.toFixed(2);
+            document.getElementById("imax").innerText = imax.toFixed(2);
+            document.getElementById("fres").innerText = fres.toFixed(2);
+            document.getElementById("angle").innerText = angle.toFixed(2);
+
+            updateSineWaveChart(f, imax, r, xc, xl);
+        }
+
+        function updateSineWaveChart(f, imax, r, xc, xl) {
+            const time = [...Array(100).keys()].map(i => i / 100 * 2 * Math.PI);
+            const sineData = {
+                labels: time.map(t => t.toFixed(2)),
+                datasets: [
+                    { label: "Resistor Voltage", data: time.map(t => imax * r * Math.sin(t)), borderColor: "red", fill: false },
+                    { label: "Inductor Voltage", data: time.map(t => imax * xl * Math.sin(t + Math.PI / 2)), borderColor: "blue", fill: false },
+                    { label: "Capacitor Voltage", data: time.map(t => imax * xc * Math.sin(t - Math.PI / 2)), borderColor: "green", fill: false },
+                    { label: "Supply Voltage", data: time.map(t => imax * Math.sqrt(r ** 2 + (xl - xc) ** 2) * Math.sin(t)), borderColor: "purple", fill: false }
+                ]
+            };
+
+            if (sineWaveChart) sineWaveChart.destroy();
+            sineWaveChart = new Chart(document.getElementById("sineWaveChart"), {
+                type: 'line',
+                data: sineData,
+                options: { scales: { x: { title: { display: true, text: "Time (s)" } }, y: { title: { display: true, text: "Voltage (V)" } } } }
+            });
+        }
+
+        updateSimulation();
+    </script>
+</body>
+</html>
