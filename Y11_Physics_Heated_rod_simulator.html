@@ -5,51 +5,120 @@
   <title>Steel Rod Heat Conduction with IR</title>
   <style>
     body {
-      background: #111;
-      color: white;
-      text-align: center;
       font-family: Helvetica, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 2em;
+      text-align: center;
+      color: #333;
     }
+
+    .card {
+      background: white;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 1000px;
+      margin: auto;
+    }
+
     canvas {
-      background: #222;
-      border: 2px solid white;
       display: block;
-      margin: 20px auto;
+      margin: 1em auto;
+      border: 2px solid #ccc;
+      border-radius: 12px;
+      background: #222;
     }
+
+    h1 {
+      margin-bottom: 1em;
+    }
+
     .controls {
-      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 2em;
+      margin-top: 1.5em;
     }
-    input[type="range"] {
-      width: 300px;
+
+    .control-group {
+      text-align: center;
     }
-    button {
-      margin-left: 20px;
-      padding: 6px 12px;
-      font-size: 14px;
-      cursor: pointer;
-    }
+
     label {
-      font-size: 16px;
+      font-weight: bold;
+      font-size: 1em;
+      display: block;
+      margin-bottom: 0.3em;
+    }
+
+    input[type="range"] {
+      width: 220px;
+      appearance: none;
+      height: 8px;
+      border-radius: 4px;
+      background: #ddd;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #007bff;
+      cursor: pointer;
+      border: none;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #007bff;
+      cursor: pointer;
+      border: none;
+    }
+
+    button {
+      padding: 0.6em 1.2em;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      margin-top: 1.3em;
+    }
+
+    button:hover {
+      background-color: #0056b3;
     }
   </style>
 </head>
 <body>
-  <h1>Steel Rod Heat Conduction with IR Radiation</h1>
-  <canvas id="canvas" width="900" height="200"></canvas>
-  <canvas id="chartCanvas" width="900" height="180"></canvas>
+  <div class="card">
+    <h1>Steel Rod Heat Conduction with IR Radiation</h1>
+    <canvas id="canvas" width="900" height="200"></canvas>
+    <canvas id="chartCanvas" width="900" height="180"></canvas>
 
-  <div class="controls">
-    <label>Conduction Rate: <span id="rateLabel">0.02</span></label>
-    <input type="range" id="rateSlider" min="0.001" max="1.0" step="0.001" value="0.02">
-    <br><br>
-    <label>IR Loss Rate: <span id="irLossRateLabel">0.02</span></label>
-    <input type="range" id="irLossRateSlider" min="0.00" max="1.0" step="0.01" value="0.02">
-    <br><br>
-    <label>Heat Input: <span id="heatInputLabel">1.00</span></label>
-    <input type="range" id="heatInputSlider" min="0" max="2" step="0.01" value="1.00">
-    <br><br>
-    <label><input type="checkbox" id="relativeToggle" checked> Relative Y-Axis</label>
-    <button id="resetButton">Reset</button>
+    <div class="controls">
+      <div class="control-group">
+        <label>Conduction Rate: <span id="rateLabel">0.5</span></label>
+        <input type="range" id="rateSlider" min="0.001" max="1.0" step="0.001" value="0.5">
+      </div>
+      <div class="control-group">
+        <label>IR Loss Rate: <span id="irLossRateLabel">0.02</span></label>
+        <input type="range" id="irLossRateSlider" min="0.00" max="1.0" step="0.01" value="0.02">
+      </div>
+      <div class="control-group">
+        <label>Heat Input: <span id="heatInputLabel">1.00</span></label>
+        <input type="range" id="heatInputSlider" min="0" max="2" step="0.01" value="1.00">
+      </div>
+      <button id="resetButton">Reset</button>
+    </div>
   </div>
 
   <script>
@@ -65,7 +134,6 @@
     let conductionRate = parseFloat(document.getElementById("rateSlider").value);
     let irLossRate = parseFloat(document.getElementById("irLossRateSlider").value);
     let heatInput = parseFloat(document.getElementById("heatInputSlider").value);
-    let relativeYAxis = document.getElementById("relativeToggle").checked;
 
     const particles = [];
     const irBursts = [];
@@ -83,25 +151,23 @@
       particles[0].temp = heatInput;
     }
 
-function emitIR(particle, scale = 1.0) {
-  if (irLossRate <= 0) return;
-  const intensity = Math.pow(particle.temp, 4);
-  const emissionChance = irLossRate * intensity * 0.1 * scale;
-
-  if (Math.random() < emissionChance) {
-    const energyLoss = irLossRate * intensity * 10 * scale;
-    irBursts.push({
-      x: particle.x,
-      y: baseY,
-      radius: 0,
-      alpha: 1,
-      strength: energyLoss
-    });
-    particle.temp -= energyLoss;
-    if (particle.temp < 0) particle.temp = 0;
-  }
-}
-
+    function emitIR(particle, scale = 1.0) {
+      if (irLossRate <= 0) return;
+      const intensity = Math.pow(particle.temp, 4);
+      const emissionChance = irLossRate * intensity * 0.1 * scale;
+      if (Math.random() < emissionChance) {
+        const energyLoss = irLossRate * intensity * 10 * scale;
+        irBursts.push({
+          x: particle.x,
+          y: baseY,
+          radius: 0,
+          alpha: 1,
+          strength: energyLoss
+        });
+        particle.temp -= energyLoss;
+        if (particle.temp < 0) particle.temp = 0;
+      }
+    }
 
     function updateIR() {
       for (let i = irBursts.length - 1; i >= 0; i--) {
@@ -133,47 +199,40 @@ function emitIR(particle, scale = 1.0) {
     function updateHeat() {
       const temps = particles.map(p => p.temp);
       const newTemps = new Array(numParticles).fill(0);
-
       for (let i = 0; i < numParticles; i++) {
         let left = i > 0 ? temps[i - 1] : temps[i];
         let right = i < numParticles - 1 ? temps[i + 1] : temps[i];
         let current = temps[i];
-
         let netFlow = conductionRate * ((left - current) + (right - current));
         newTemps[i] = current + 0.5 * netFlow;
       }
-
       for (let i = 0; i < numParticles; i++) {
         particles[i].temp = newTemps[i];
-emitIR(particles[i], i === 0 ? 0.1 : 1.0); // Scale for leftmost
+        emitIR(particles[i], i === 0 ? 0.1 : 1.0);
         particles[i].amplitude = particles[i].temp * maxAmplitude;
       }
     }
 
     function drawFlame() {
-  const flameHeight = heatInput * 60 + Math.random() * 10;
-  const flameBaseX = particles[0].x + 5; // shift right to bring into frame
-  const flameBaseY = canvas.height - 10; // anchored to bottom of canvas
+      const flameHeight = heatInput * 60 + Math.random() * 10;
+      const flameBaseX = particles[0].x + 5;
+      const flameBaseY = canvas.height - 10;
 
-  // Outer red glow
-  ctx.beginPath();
-  ctx.fillStyle = "rgba(255, 50, 0, 0.3)";
-  ctx.ellipse(flameBaseX, flameBaseY - flameHeight / 2, 20, flameHeight, 0, 0, 2 * Math.PI);
-  ctx.fill();
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(255, 50, 0, 0.3)";
+      ctx.ellipse(flameBaseX, flameBaseY - flameHeight / 2, 20, flameHeight, 0, 0, 2 * Math.PI);
+      ctx.fill();
 
-  // Middle orange core
-  ctx.beginPath();
-  ctx.fillStyle = "rgba(255, 150, 0, 0.7)";
-  ctx.ellipse(flameBaseX + 2, flameBaseY - flameHeight / 2, 14, flameHeight * 0.8, 0, 0, 2 * Math.PI);
-  ctx.fill();
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(255, 150, 0, 0.7)";
+      ctx.ellipse(flameBaseX + 2, flameBaseY - flameHeight / 2, 14, flameHeight * 0.8, 0, 0, 2 * Math.PI);
+      ctx.fill();
 
-  // Yellow center
-  ctx.beginPath();
-  ctx.fillStyle = "rgba(255, 255, 100, 0.9)";
-  ctx.ellipse(flameBaseX + 2, flameBaseY - flameHeight / 2, 6, flameHeight * 0.5, 0, 0, 2 * Math.PI);
-  ctx.fill();
-}
-
+      ctx.beginPath();
+      ctx.fillStyle = "rgba(255, 255, 100, 0.9)";
+      ctx.ellipse(flameBaseX + 2, flameBaseY - flameHeight / 2, 6, flameHeight * 0.5, 0, 0, 2 * Math.PI);
+      ctx.fill();
+    }
 
     function drawParticles() {
       particles.forEach(p => {
@@ -190,16 +249,13 @@ emitIR(particles[i], i === 0 ? 0.1 : 1.0); // Scale for leftmost
 
     function drawEnergyChart() {
       chartCtx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
-
       const maxTemp = Math.max(...particles.map(p => p.temp));
-      const yScale = relativeYAxis ? maxTemp : 1.0;
+      const yScale = maxTemp;
 
-      // Draw chart title
       chartCtx.fillStyle = "white";
       chartCtx.font = "16px Helvetica";
       chartCtx.fillText("Temperature per Particle", chartCanvas.width / 2 - 80, 18);
 
-      // Draw bars
       chartCtx.fillStyle = "lime";
       particles.forEach((p, i) => {
         const height = (p.temp / yScale) * (chartCanvas.height - 20);
@@ -232,10 +288,6 @@ emitIR(particles[i], i === 0 ? 0.1 : 1.0); // Scale for leftmost
     document.getElementById("heatInputSlider").addEventListener("input", e => {
       heatInput = parseFloat(e.target.value);
       document.getElementById("heatInputLabel").textContent = heatInput.toFixed(2);
-    });
-
-    document.getElementById("relativeToggle").addEventListener("change", e => {
-      relativeYAxis = e.target.checked;
     });
 
     document.getElementById("resetButton").addEventListener("click", () => {
