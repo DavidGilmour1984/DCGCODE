@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phasor Rotation Simulator</title>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      background-color: #f5f5f5;
+      padding: 0.5em;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 1300px;
+      margin: auto;
+      display: flex;
+      justify-content: space-between;
+      gap: 2em;
+    }
+    .sim-section, .calc-section {
+      flex: 1;
+    }
+    canvas {
+      background-color: #ffffff;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      margin-top: 1em;
+    }
+    .control-group {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.8em;
+    }
+    .control-group label {
+      flex: 1;
+      font-weight: bold;
+      text-align: left;
+    }
+    .control-group input[type="number"] {
+      flex: 1;
+      padding: 0.4em;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    button {
+      margin-top: 1em;
+      margin-right: 0.5em;
+      padding: 0.5em 1.6em;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .output {
+      font-size: 0.9rem;
+      margin-top: 1em;
+    }
+    .output .section {
+      margin-top: 1em;
+      text-align: left;
+    }
+    .controls {
+      margin-bottom: 2em;
+      text-align: left;
+    }
+    sup {
+      font-size: smaller;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="sim-section">
+      <h2>Phasor Rotation Simulator</h2>
+      <canvas id="phasorCanvas" width="500" height="500"></canvas>
+      <div class="output">
+        <div>Rotational Displacement (rad): <span id="thetaVal">0</span></div>
+        <div>Horizontal Displacement (m): <span id="displacementVal">0</span></div>
+      </div>
+    </div>
+    <div class="calc-section">
+      <h2>Settings</h2>
+      <div class="controls">
+        <div class="control-group">
+          <label for="length">Pendulum Length (m):</label>
+          <input type="number" id="length" value="10" step="0.01">
+        </div>
+        <div class="control-group">
+          <label for="duration">Duration (s):</label>
+          <input type="number" id="duration" value="2">
+        </div>
+        <div class="control-group">
+          <label for="amplitude">Pendulum Amplitude:</label>
+          <input type="number" id="amplitude" value="1" step="0.1">
+        </div>
+        <button onclick="startPhasor()">Start</button>
+        <button onclick="resetPhasor()">Reset</button>
+      </div>
+      <div class="output">
+        <div style="display: flex; gap: 2em; justify-content: space-between;">
+          <div class="section" style="flex: 1;">
+            <strong>Period</strong><br>
+            Formula: T = 2π √(L / g)<br>
+            Substituted: <span id="periodSub"></span><br>
+            Result: <span id="period">0</span> s
+          </div>
+          <div class="section" style="flex: 1;">
+            <strong>Angular Velocity</strong><br>
+            Formula: ω = 2π / T<br>
+            Substituted: <span id="omegaSub"></span><br>
+            Result: <span id="omega">0</span> rads<sup>-1</sup>
+          </div>
+        </div>
+        <div class="section">
+  <strong style="color: red">Displacement</strong><br>
+          Formula: <span id="dispFormula">y = A × sin(ω × t)</span><br>
+          Substituted: <span id="dispSub"></span><br>
+          Result: <span id="disp">0</span> m
+        </div>
+        <div class="section">
+          <strong>Velocity</strong><br>
+          Formula: <span id="velFormula">v = A × ω × cos(ω × t)</span><br>
+          Substituted: <span id="velSub"></span><br>
+          Result: <span id="vel">0</span> ms<sup>-1</sup>
+        </div>
+        <div class="section">
+          <strong>Acceleration</strong><br>
+          Formula: <span id="accFormula">a = -A × ω² × sin(ω × t)</span><br>
+          Substituted: <span id="accSub"></span><br>
+          Result: <span id="acc">0</span> ms<sup>-2</sup>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const canvas = document.getElementById("phasorCanvas");
+    const ctx = canvas.getContext("2d");
+    const center = { x: canvas.width / 2, y: canvas.height / 2 + 100 };
+    const pendulumAnchor = { x: canvas.width / 2, y: -250 };
+    const thetaVal = document.getElementById("thetaVal");
+    const displacementVal = document.getElementById("displacementVal");
+    const dispSpan = document.getElementById("disp");
+    const velSpan = document.getElementById("vel");
+    const accSpan = document.getElementById("acc");
+    const dispSub = document.getElementById("dispSub");
+    const velSub = document.getElementById("velSub");
+    const accSub = document.getElementById("accSub");
+    const dispFormula = document.getElementById("dispFormula");
+    const velFormula = document.getElementById("velFormula");
+    const accFormula = document.getElementById("accFormula");
+    const lengthInput = document.getElementById("length");
+    const periodSpan = document.getElementById("period");
+    const periodSub = document.getElementById("periodSub");
+    const omegaSpan = document.getElementById("omega");
+    const omegaSub = document.getElementById("omegaSub");
+
+    const g = 9.81;
+    let omega = 0;
+    let interval;
+    let startTime;
+
+    function calculatePeriodAndOmega() {
+      const length = parseFloat(lengthInput.value);
+      const period = 2 * Math.PI * Math.sqrt(length / g);
+      omega = 2 * Math.PI / period;
+
+      periodSpan.textContent = period.toFixed(3);
+      periodSub.textContent = ` T = 2π √(${length.toFixed(2)} / ${g})`;
+      omegaSpan.textContent = omega.toFixed(3);
+      omegaSub.textContent = ` ω = 2π / ${period.toFixed(3)}`;
+    }
+
+    function updateFormulaLabels() {
+      dispFormula.textContent = `y = A × sin(ω × t)`;
+      velFormula.textContent = `v = A × ω × cos(ω × t)`;
+      accFormula.textContent = `a = -A × ω² × sin(ω × t)`;
+    }
+
+    function drawPhasor(theta, amp = 1, t = 0) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const radius = 150;
+
+      const displacement = amp * Math.cos(theta);
+      const velocity = amp * omega * Math.sin(theta);
+      const acceleration = -amp * omega * omega * Math.cos(theta);
+
+      thetaVal.textContent = ((theta % (2 * Math.PI)).toFixed(3));
+      displacementVal.textContent = displacement.toFixed(3);
+      dispSpan.textContent = displacement.toFixed(3);
+      velSpan.textContent = velocity.toFixed(3);
+      accSpan.textContent = acceleration.toFixed(3);
+
+      dispSub.textContent = `y = ${amp.toFixed(2)} × sin(${omega.toFixed(2)} × ${t.toFixed(2)})`;
+      velSub.textContent = `v = ${amp.toFixed(2)} × ${omega.toFixed(2)} × cos(${omega.toFixed(2)}`;
+      accSub.textContent = `a = -${amp.toFixed(2)} × ${omega.toFixed(2)}² × sin(${omega.toFixed(2)}`;
+
+      const endX = center.x + radius * Math.cos(theta);
+      const endY = center.y + radius * Math.sin(theta);
+
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, radius, 0, 2 * Math.PI);
+      ctx.strokeStyle = "#ccc";
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, 5, 0, 2 * Math.PI);
+      ctx.fillStyle = "black";
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(center.x, center.y);
+      ctx.lineTo(endX, endY);
+      ctx.strokeStyle = "blue";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      const displacementX = center.x + radius * Math.cos(theta);
+      ctx.beginPath();
+      ctx.moveTo(center.x, center.y);
+      ctx.lineTo(displacementX, center.y);
+      ctx.strokeStyle = "red";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(endX, endY);
+      ctx.lineTo(displacementX, center.y);
+      ctx.strokeStyle = "green";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      const pendulumX = pendulumAnchor.x + radius * Math.cos(theta);
+      const pendulumLength = 300;
+      const pendulumY = pendulumAnchor.y + Math.sqrt(pendulumLength ** 2 - (radius * Math.cos(theta)) ** 2);
+
+      ctx.beginPath();
+      ctx.moveTo(pendulumAnchor.x, pendulumAnchor.y);
+      ctx.lineTo(pendulumX, pendulumY);
+      ctx.strokeStyle = "black";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(pendulumX, pendulumY, 10, 0, 2 * Math.PI);
+      ctx.fillStyle = "gray";
+      ctx.fill();
+    }
+
+    function startPhasor() {
+      clearInterval(interval);
+      calculatePeriodAndOmega();
+      updateFormulaLabels();
+
+      const duration = parseFloat(document.getElementById("duration").value);
+      const amp = parseFloat(document.getElementById("amplitude").value);
+      const phase = Math.PI / 2; // 90°, start at center, moving right
+
+      startTime = Date.now();
+      interval = setInterval(() => {
+        const elapsed = (Date.now() - startTime) / 1000;
+        if (elapsed >= duration) {
+          clearInterval(interval);
+          return;
+        }
+        const currentAngle = phase - omega * elapsed; // clockwise
+        drawPhasor(currentAngle, amp, elapsed);
+      }, 30);
+    }
+
+    function resetPhasor() {
+      clearInterval(interval);
+      startPhasor();
+    }
+
+    [lengthInput, document.getElementById("amplitude")].forEach(input => {
+      input.addEventListener("input", resetPhasor);
+    });
+
+    startPhasor();
+  </script>
+</body>
+</html>
