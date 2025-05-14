@@ -5,32 +5,102 @@
   <title>Convection in a Beaker</title>
   <style>
     body {
-      background: #111;
-      color: white;
-      text-align: center;
       font-family: Helvetica, sans-serif;
+      background-color: #f5f5f5;
       margin: 0;
+      padding: 2em;
+      text-align: center;
+      color: #333;
     }
+
+    .card {
+      background: white;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    h1 {
+      margin-bottom: 1em;
+    }
+
     canvas {
       display: block;
-      margin: 10px auto;
-      border: 2px solid white;
+      margin: 1em auto;
+      border: 2px solid #ccc;
+      border-radius: 12px;
       background: #222;
     }
+
     .controls {
-      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 2em;
+      margin-top: 1.5em;
     }
+
+    .control-group {
+      text-align: center;
+    }
+
+    label {
+      font-weight: bold;
+      font-size: 1.1em;
+      display: block;
+      margin-bottom: 0.4em;
+    }
+
     input[type="range"] {
-      width: 300px;
+      width: 220px;
+      appearance: none;
+      height: 8px;
+      border-radius: 4px;
+      background: #ddd;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #007bff;
+      cursor: pointer;
+      border: none;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #007bff;
+      cursor: pointer;
+      border: none;
     }
   </style>
 </head>
 <body>
-  <h1>Convection Current Simulation</h1>
-  <canvas id="canvas" width="900" height="400"></canvas>
-  <div class="controls">
-    <label>Heat Input: <span id="heatValue">0.01</span></label><br>
-    <input type="range" id="heatSlider" min="0" max="0.05" step="0.001" value="0.01">
+  <div class="card">
+    <h1>Convection Current Simulation</h1>
+    <canvas id="canvas" width="900" height="400"></canvas>
+    <div class="controls">
+      <div class="control-group">
+        <label>Heating Rate: <span id="heatValue">0.01</span></label>
+        <input type="range" id="heatSlider" min="0" max="0.1" step="0.01" value="0.01">
+      </div>
+      <div class="control-group">
+        <label>Heat Zone X Position: <span id="heatPosValue">450</span></label>
+        <input type="range" id="heatPosSlider" min="0" max="900" step="1" value="450">
+      </div>
+      <div class="control-group">
+        <label>Inter-Particle Heat Conduction: <span id="conductionValue">0.1</span></label>
+        <input type="range" id="conductionSlider" min="0" max="0.3" step="0.01" value="0.1">
+      </div>
+    </div>
   </div>
 
   <script>
@@ -41,10 +111,11 @@
     const rows = 20;
     const spacing = 20;
     const particleRadius = 5;
-    let heatStrength = parseFloat(document.getElementById("heatSlider").value);
 
-    const heatZoneWidth = 200;
-    const heatZoneX = canvas.width / 2 - heatZoneWidth / 2;
+    let heatStrength = parseFloat(document.getElementById("heatSlider").value);
+    let heatZoneCenterX = parseFloat(document.getElementById("heatPosSlider").value);
+    let heatConduction = parseFloat(document.getElementById("conductionSlider").value);
+
     const particles = [];
 
     for (let i = 0; i < cols; i++) {
@@ -60,7 +131,7 @@
     }
 
     function applyPressure() {
-      const interactionDistance = spacing * 0.9;
+      const interactionDistance = spacing * 0.99;
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const a = particles[i];
@@ -76,17 +147,25 @@
             a.vy -= fy;
             b.vx += fx;
             b.vy += fy;
+
+            // Temperature blending (heat conduction)
+            const avgTemp = (a.temp + b.temp) / 2;
+            a.temp += (avgTemp - a.temp) * heatConduction;
+            b.temp += (avgTemp - b.temp) * heatConduction;
           }
         }
       }
     }
 
     function updateParticles() {
+      const heatZoneWidth = 200;
+      const heatZoneX1 = heatZoneCenterX - heatZoneWidth / 2;
+      const heatZoneX2 = heatZoneCenterX + heatZoneWidth / 2;
+
       applyPressure();
 
       particles.forEach(p => {
-        // Apply heat if in central heat zone at bottom
-        if (p.x > heatZoneX && p.x < heatZoneX + heatZoneWidth && p.y > canvas.height - 60) {
+        if (p.x > heatZoneX1 && p.x < heatZoneX2 && p.y > canvas.height - 60) {
           p.temp += heatStrength;
           if (p.temp > 1) p.temp = 1;
         } else {
@@ -98,15 +177,12 @@
         p.vy += buoyancy + (Math.random() - 0.5) * 0.2;
         p.vx += (Math.random() - 0.5) * 0.2;
 
-        // Damping
         p.vx *= 0.98;
         p.vy *= 0.98;
 
-        // Update position
         p.x += p.vx;
         p.y += p.vy;
 
-        // Beaker boundaries
         const leftWall = spacing;
         const rightWall = canvas.width - spacing;
         const topWall = spacing;
@@ -135,13 +211,19 @@
       ctx.lineWidth = 2;
       ctx.strokeRect(spacing, spacing, canvas.width - 2 * spacing, canvas.height - 2 * spacing);
 
-      const heatCenter = canvas.width / 2;
-      const gradient = ctx.createRadialGradient(heatCenter, canvas.height - 20, 10, heatCenter, canvas.height - 20, 100);
+      const gradient = ctx.createRadialGradient(
+        heatZoneCenterX,
+        canvas.height - 20,
+        10,
+        heatZoneCenterX,
+        canvas.height - 20,
+        200
+      );
       gradient.addColorStop(0, "rgba(255, 100, 0, 0.6)");
       gradient.addColorStop(1, "rgba(255, 100, 0, 0)");
       ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.arc(heatCenter, canvas.height - 20, 60, 0, Math.PI * 2);
+      ctx.arc(heatZoneCenterX, canvas.height - 20, 200, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -153,10 +235,19 @@
       requestAnimationFrame(animate);
     }
 
-    // Heat slider control
-    document.getElementById("heatSlider").addEventListener("input", (e) => {
+    document.getElementById("heatSlider").addEventListener("input", e => {
       heatStrength = parseFloat(e.target.value);
       document.getElementById("heatValue").textContent = heatStrength.toFixed(3);
+    });
+
+    document.getElementById("heatPosSlider").addEventListener("input", e => {
+      heatZoneCenterX = parseFloat(e.target.value);
+      document.getElementById("heatPosValue").textContent = heatZoneCenterX;
+    });
+
+    document.getElementById("conductionSlider").addEventListener("input", e => {
+      heatConduction = parseFloat(e.target.value);
+      document.getElementById("conductionValue").textContent = heatConduction.toFixed(2);
     });
 
     animate();
