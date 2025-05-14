@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Physical Diffusion Simulation</title>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 2em;
+      text-align: center;
+      color: #333;
+    }
+
+    .card {
+      background: white;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    h1 {
+      margin-bottom: 1em;
+    }
+
+    canvas {
+      display: block;
+      margin: 1em auto;
+      border: 2px solid #ccc;
+      border-radius: 12px;
+      background: #222;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 2em;
+      margin-top: 1.5em;
+    }
+
+    .control-group {
+      text-align: center;
+    }
+
+    label {
+      font-weight: bold;
+      font-size: 1.1em;
+      display: block;
+      margin-bottom: 0.4em;
+    }
+
+    input[type="range"] {
+      width: 220px;
+      appearance: none;
+      height: 8px;
+      border-radius: 4px;
+      background: #ddd;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #007bff;
+      cursor: pointer;
+      border: none;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #007bff;
+      cursor: pointer;
+      border: none;
+    }
+
+    button {
+      padding: 0.6em 1.2em;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Diffusion Simulator</h1>
+    <canvas id="canvas" width="900" height="400"></canvas>
+
+    <div class="controls">
+      <div class="control-group">
+        <label>Initial Concentration: <span id="concValue">10</span>% red</label>
+        <input type="range" id="concSlider" min="0" max="100" value="10">
+      </div>
+      <div class="control-group">
+        <label>System Temperature: <span id="tempValue">1.0</span></label>
+        <input type="range" id="tempSlider" min="0.1" max="3.0" step="0.1" value="1.0">
+      </div>
+      <div class="control-group">
+        <button id="restartBtn">Restart</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const spacing = 20;
+    const particleRadius = 5;
+    const totalParticles = 600;
+    let redPercentage = 10;
+    let systemTemp = 1.0;
+
+    const beaker = {
+      left: spacing,
+      right: canvas.width - spacing,
+      top: spacing,
+      bottom: canvas.height - spacing
+    };
+
+    let particles = [];
+
+    function createParticles() {
+      particles = [];
+      const redCount = Math.floor((redPercentage / 100) * totalParticles);
+      const grayCount = totalParticles - redCount;
+
+      for (let i = 0; i < redCount; i++) {
+        particles.push({
+          x: beaker.left + Math.random() * 60,
+          y: beaker.bottom - Math.random() * 60,
+          vx: 0,
+          vy: 0,
+          color: 'red'
+        });
+      }
+
+      for (let i = 0; i < grayCount; i++) {
+        particles.push({
+          x: Math.random() * (canvas.width - 2 * spacing) + spacing,
+          y: Math.random() * (canvas.height - 2 * spacing) + spacing,
+          vx: 0,
+          vy: 0,
+          color: 'gray'
+        });
+      }
+    }
+
+    function applyParticlePhysics() {
+      const interactionDistance = 2 * particleRadius;
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const a = particles[i];
+          const b = particles[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < interactionDistance && dist > 0) {
+            const overlap = interactionDistance - dist;
+            const fx = (dx / dist) * overlap * 0.4;
+            const fy = (dy / dist) * overlap * 0.4;
+            a.vx -= fx;
+            a.vy -= fy;
+            b.vx += fx;
+            b.vy += fy;
+          }
+        }
+      }
+    }
+
+    function updateParticles() {
+      applyParticlePhysics();
+
+      particles.forEach(p => {
+        p.vx += (Math.random() - 0.5) * 0.4 * systemTemp;
+        p.vy += (Math.random() - 0.5) * 0.4 * systemTemp;
+        p.vx *= 0.98;
+        p.vy *= 0.98;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        if (p.x < beaker.left) { p.x = beaker.left; p.vx *= -0.5; }
+        if (p.x > beaker.right) { p.x = beaker.right; p.vx *= -0.5; }
+        if (p.y < beaker.top) { p.y = beaker.top; p.vy *= -0.5; }
+        if (p.y > beaker.bottom) { p.y = beaker.bottom; p.vy *= -0.5; }
+      });
+    }
+
+    function drawParticles() {
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, particleRadius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+      });
+    }
+
+    function drawBeaker() {
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(beaker.left, beaker.top, beaker.right - beaker.left, beaker.bottom - beaker.top);
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBeaker();
+      updateParticles();
+      drawParticles();
+      requestAnimationFrame(animate);
+    }
+
+    document.getElementById("concSlider").addEventListener("input", e => {
+      redPercentage = parseInt(e.target.value);
+      document.getElementById("concValue").textContent = redPercentage;
+    });
+
+    document.getElementById("tempSlider").addEventListener("input", e => {
+      systemTemp = parseFloat(e.target.value);
+      document.getElementById("tempValue").textContent = systemTemp.toFixed(1);
+    });
+
+    document.getElementById("restartBtn").addEventListener("click", () => {
+      createParticles();
+    });
+
+    createParticles();
+    animate();
+  </script>
+</body>
+</html>
