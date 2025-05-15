@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Rotational Motion Simulator</title>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      background-color: #f5f5f5;
+      padding: 20px;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      max-width: 1200px;
+      margin: auto;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 1em;
+      align-items: center;
+    }
+    .card-content {
+      display: flex;
+      gap: 2em;
+      justify-content: flex-start;
+      width: 100%;
+    }
+    canvas {
+      background: #fff;
+      border: 1px solid #ccc;
+    }
+    .controls {
+      text-align: left;
+      font-size: 1rem;
+      margin-left: 0;
+    }
+    .control-group {
+      margin-bottom: 1em;
+    }
+    .control-group label {
+      display: block;
+      margin-bottom: 4px;
+    }
+    .control-group input[type=range] {
+      width: 200px;
+    }
+    button {
+      padding: 0.6em 1.2em;
+      margin-top: 10px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .output, .formulas {
+            font-family: Helvetica, sans-serif;
+      margin-top: 1em;
+      font-size: 0.95rem;
+      text-align: left;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Rotational Motion: Turntable Simulator</h2>
+    <div class="card-content">
+      <div class="controls">
+        <div class="control-group">
+          <label>Moment of Inertia (kg·m²): <span id="inertiaVal">10</span></label>
+          <input type="range" id="inertia" min="1" max="50" value="10" step="0.1">
+        </div>
+        <div class="control-group">
+          <label>Force Applied (N): <span id="forceVal">20</span></label>
+          <input type="range" id="force" min="0" max="100" value="20" step="1">
+        </div>
+        <div class="control-group">
+          <label>Application Radius (m): <span id="radiusVal">1.0</span></label>
+          <input type="range" id="radius" min="0.1" max="2.0" value="1.0" step="0.1">
+        </div>
+        <div class="control-group">
+          <label>Time Force Applied (s): <span id="durationVal">5</span></label>
+          <input type="range" id="duration" min="1" max="10" value="5" step="0.1">
+        </div>
+        <button onclick="startSimulation()">Start</button>
+        <button onclick="stopSimulation()">Stop</button>
+        <button onclick="resetSimulation()">Reset</button>
+        <div class="output" id="results"></div>
+        <div class="formulas" id="formulas"></div>
+      </div>
+      <div style="margin-left: 150px;">
+        <canvas id="canvas" width="400" height="600"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    const visualRadius = 170;
+
+    let angle = 0, omega = 0, alpha = 0, torque = 0, momentum = 0;
+    let startTime = null, elapsed = 0;
+    let animationFrame = null;
+    let running = false;
+    let previousInertia = parseFloat(document.getElementById("inertia").value);
+
+    const inertiaInput = document.getElementById("inertia");
+    const forceInput = document.getElementById("force");
+    const radiusInput = document.getElementById("radius");
+    const durationInput = document.getElementById("duration");
+
+    function updateSliderLabels() {
+      document.getElementById("inertiaVal").textContent = inertiaInput.value;
+      document.getElementById("forceVal").textContent = forceInput.value;
+      document.getElementById("radiusVal").textContent = parseFloat(radiusInput.value).toFixed(1);
+      document.getElementById("durationVal").textContent = durationInput.value;
+
+      const F = parseFloat(forceInput.value);
+      const r = parseFloat(radiusInput.value);
+      const I = parseFloat(inertiaInput.value);
+      const forceDuration = parseFloat(durationInput.value);
+      const tForce = Math.min(elapsed, forceDuration);
+      const torqueVal = (elapsed <= forceDuration) ? F * r : 0;
+      const alphaVal = (elapsed <= forceDuration) ? torqueVal / I : 0;
+      const momentumVal = I * omega;
+      const displacement = omega * elapsed + 0.5 * alphaVal * tForce * tForce;
+
+     // ... (your existing code context)
+
+document.getElementById("formulas").innerHTML =
+  `Torque: τ = F × r = ${F} × ${r} = ${torqueVal.toFixed(2)} Nm<br>
+  <br>
+  Acceleration: α = τ × I⁻¹<br>
+  = ${torqueVal.toFixed(2)} × ${I}⁻¹ = ${alphaVal.toFixed(2)} rad·s⁻²<br>
+  <br>
+  Angular Velocity: ω = α × t<br>
+  = ${alphaVal.toFixed(2)} × ${elapsed.toFixed(2)} = ${omega.toFixed(2)} rad·s⁻¹<br>
+  <br>
+  Displacement: θ = ω × t + 0.5 × α × t²<br>
+  = ${omega.toFixed(2)} × ${elapsed.toFixed(2)} + 0.5 × ${alphaVal.toFixed(2)} × (${elapsed.toFixed(2)}²) = ${displacement.toFixed(2)} rad<br>
+  <br>
+  Momentum: L = I × ω<br>
+  = ${I} × ${omega.toFixed(2)} = ${momentumVal.toFixed(2)} kg·m²·s⁻¹`;
+}
+
+    [inertiaInput, forceInput, radiusInput, durationInput].forEach(slider =>
+      slider.addEventListener("input", updateSliderLabels)
+    );
+
+    inertiaInput.addEventListener("input", () => {
+      const newInertia = parseFloat(inertiaInput.value);
+      if (newInertia !== previousInertia && previousInertia !== 0) {
+        omega = (previousInertia * omega) / newInertia;
+        previousInertia = newInertia;
+      }
+    });
+
+    function drawArrow(x1, y1, x2, y2, color = "red") {
+      const headLength = 10;
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const angle = Math.atan2(dy, dx);
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - headLength * Math.cos(angle - Math.PI / 6), y2 - headLength * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(x2 - headLength * Math.cos(angle + Math.PI / 6), y2 - headLength * Math.sin(angle + Math.PI / 6));
+      ctx.lineTo(x2, y2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    function drawTurntable(ratio) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const segments = 4;
+      const angleStep = (2 * Math.PI) / segments;
+      for (let i = 0; i < segments; i++) {
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, visualRadius, i * angleStep + angle, (i + 1) * angleStep + angle);
+        ctx.closePath();
+        ctx.fillStyle = i % 2 === 0 ? 'yellow' : 'white';
+        ctx.fill();
+        ctx.strokeStyle = '#888';
+        ctx.stroke();
+      }
+
+      const spokeX = cx + visualRadius * Math.cos(angle);
+      const spokeY = cy + visualRadius * Math.sin(angle);
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(spokeX, spokeY);
+      ctx.strokeStyle = "blue";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      const fx = cx + ratio * visualRadius * Math.cos(angle);
+      const fy = cy + ratio * visualRadius * Math.sin(angle);
+      const ax = fx + 20 * Math.cos(angle - Math.PI / 2);
+      const ay = fy + 20 * Math.sin(angle - Math.PI / 2);
+      drawArrow(fx, fy, ax, ay, "red");
+    }
+
+    function updateSimulation(timestamp) {
+      if (!startTime) startTime = timestamp;
+      elapsed = (timestamp - startTime) / 1000;
+
+      const F = parseFloat(forceInput.value);
+      const r = parseFloat(radiusInput.value);
+      const I = parseFloat(inertiaInput.value);
+      const forceDuration = parseFloat(durationInput.value);
+
+      if (elapsed <= forceDuration) {
+        torque = F * r;
+        alpha = torque / I;
+      } else {
+        alpha = 0;
+        torque = 0;
+      }
+
+      omega += alpha * 0.016;
+      angle -= omega * 0.016;
+      momentum = I * omega;
+
+      drawTurntable(r / 2);
+
+      document.getElementById("results").innerHTML =
+        `<strong>time:</strong> ${elapsed.toFixed(2)} s`;
+
+      updateSliderLabels();
+
+      if (running) animationFrame = requestAnimationFrame(updateSimulation);
+    }
+
+    function startSimulation() {
+      if (running) return;
+      running = true;
+      omega = 0;
+      angle = 0;
+      startTime = null;
+      previousInertia = parseFloat(inertiaInput.value);
+      animationFrame = requestAnimationFrame(updateSimulation);
+    }
+
+    function stopSimulation() {
+      running = false;
+      cancelAnimationFrame(animationFrame);
+    }
+
+    function resetSimulation() {
+      stopSimulation();
+      angle = 0;
+      omega = 0;
+      alpha = 0;
+      torque = 0;
+      momentum = 0;
+      startTime = null;
+      elapsed = 0;
+      document.getElementById("results").innerHTML = "";
+      updateSliderLabels();
+      drawTurntable(parseFloat(radiusInput.value) / 2);
+    }
+
+    updateSliderLabels();
+    drawTurntable(parseFloat(radiusInput.value) / 2);
+  </script>
+</body>
+</html>
