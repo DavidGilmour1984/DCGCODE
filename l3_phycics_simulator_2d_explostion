@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Explosion Momentum Simulator</title>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      background-color: #f5f5f5;
+      padding: 2em;
+      margin: 0;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      max-width: 1200px;
+      margin: auto;
+      display: flex;
+      justify-content: space-between;
+      gap: 2em;
+    }
+    .column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    canvas {
+      background: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      margin-top: 20px;
+    }
+    table.control-table {
+      font-size: 1em;
+      border-collapse: collapse;
+    }
+    .control-table th, .control-table td {
+      padding: 4px 8px;
+    }
+    input[type="number"] {
+      width: 60px;
+      font-size: 1em;
+      text-align: center;
+    }
+    .control-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 10px;
+    }
+    button {
+      font-size: 1em;
+      padding: 6px 14px;
+      border: none;
+      border-radius: 8px;
+      background-color: #4caf50;
+      color: white;
+      cursor: pointer;
+    }
+    .calculation {
+      background: #eef0f3;
+      padding: 1em;
+      border-radius: 8px;
+      margin-top: 10px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      text-align: left;
+      width: 100%;
+      max-width: 400px;
+      min-height: 220px;
+    }
+    h2 { margin: 0.5em 0; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="column">
+    <h2>Explosion Momentum Simulator</h2>
+    <div class="control-row">
+      <button onclick="startSimulation()">Start Simulation</button>
+      <table class="control-table">
+        <tr><th></th><th>Mass (kg)</th><th>Speed (m/s)</th><th>Angle (°)</th></tr>
+        <tr>
+          <td>Initial 🟣</td>
+          <td><input id="massInit" type="number" value="5"></td>
+          <td><input id="speedInit" type="number" value="10"></td>
+          <td>-</td>
+        </tr>
+        <tr>
+          <td>Fragment A 🔴</td>
+          <td><input id="massA" type="number" value="2.5"></td>
+          <td><input id="speedA" type="number" value="13"></td>
+          <td><input id="angleA" type="number" value="45"></td>
+        </tr>
+      </table>
+    </div>
+    <canvas id="simCanvas" width="500" height="500"></canvas>
+  </div>
+
+  <div class="column">
+    <div class="calculation" id="calcArea">Waiting for explosion...</div>
+    <canvas id="triangleCanvas" width="400" height="400"></canvas>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById("simCanvas");
+const ctx = canvas.getContext("2d");
+const calcArea = document.getElementById("calcArea");
+const triCanvas = document.getElementById("triangleCanvas");
+const triCtx = triCanvas.getContext("2d");
+
+let interval, exploded = false;
+
+function toRadians(deg) {
+  return deg * Math.PI / 180;
+}
+
+function drawCircle(obj) {
+  ctx.beginPath();
+  ctx.arc(obj.x, obj.y, obj.radius, 0, 2 * Math.PI);
+  ctx.fillStyle = obj.color;
+  ctx.fill();
+}
+
+function drawArrow(ctx, x1, y1, x2, y2, color) {
+  const headlen = 10, angle = Math.atan2(y2 - y1, x2 - x1);
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
+  ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
+  ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+}
+
+function startSimulation() {
+  clearInterval(interval);
+  exploded = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  triCtx.clearRect(0, 0, triCanvas.width, triCanvas.height);
+  calcArea.textContent = "Waiting for explosion...";
+
+  const m0 = +document.getElementById("massInit").value;
+  const v0 = +document.getElementById("speedInit").value;
+  const m1 = +document.getElementById("massA").value;
+  const v1 = +document.getElementById("speedA").value;
+  const angleDeg = +document.getElementById("angleA").value;
+  const θ = toRadians(angleDeg);
+  const m2 = m0 - m1;
+
+  const p0 = m0 * v0;
+  const sinθ = Math.sin(θ);
+  const cosθ = Math.cos(θ);
+
+  const v2 = Math.sqrt((m1 * v1 * sinθ) ** 2 + (p0 - m1 * v1 * cosθ) ** 2) / m2;
+  const φ = Math.atan2(-m1 * v1 * sinθ, p0 - m1 * v1 * cosθ);
+
+  const scale = 20;
+
+  const obj = { x: 0, y: canvas.height / 2, vx: v0 * scale / 60, radius: 25, color: "purple" };
+  const fragA = {
+    x: 0, y: 0,
+    vx: v1 * Math.cos(θ) * scale / 60,
+    vy: -v1 * Math.sin(θ) * scale / 60,
+    radius: 18, color: "red", mass: m1
+  };
+  const fragB = {
+    x: 0, y: 0,
+    vx: v2 * Math.cos(φ) * scale / 60,
+    vy: -v2 * Math.sin(φ) * scale / 60,
+    radius: 18, color: "blue", mass: m2
+  };
+
+  const p1x = m1 * v1 * cosθ;
+  const p1y = m1 * v1 * sinθ;
+  const p2x = p0 - p1x;
+  const p2y = -p1y;
+  const p2 = Math.hypot(p2x, p2y);
+
+  drawVectorTriangle(p1x, p1y, p2x, p2y);
+
+  interval = setInterval(() => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!exploded) {
+      obj.x += obj.vx;
+      drawCircle(obj);
+      if (obj.x >= canvas.width / 2) {
+        exploded = true;
+        fragA.x = fragB.x = obj.x;
+        fragA.y = fragB.y = obj.y;
+
+        calcArea.textContent =
+`System Momentum:
+  p₀ = m × v = ${m0} × ${v0} = ${p0.toFixed(2)} kg·m/s (→)
+
+Fragment A 🔴:
+  p₁ = m × v = ${m1} × ${v1} = ${(m1 * v1).toFixed(2)} kg·m/s
+  θ = ${angleDeg}°
+  p₁ₓ = p × cos(θ) = ${(m1 * v1).toFixed(2)} × cos(${angleDeg}) = ${p1x.toFixed(2)} kg·m/s
+  p₁ᵧ = p × sin(θ) = ${(m1 * v1).toFixed(2)} × sin(${angleDeg}) = ${p1y.toFixed(2)} kg·m/s
+
+Fragment B 🔵:
+  m = ${m2.toFixed(2)}
+  p₂ₓ = p₀ - p₁ₓ = ${p0.toFixed(2)} - ${p1x.toFixed(2)} = ${p2x.toFixed(2)} kg·m/s
+  p₂ᵧ = -p₁ᵧ = -${p1y.toFixed(2)} = ${p2y.toFixed(2)} kg·m/s
+  p₂ = √(p₂ₓ² + p₂ᵧ²) = ${p2.toFixed(2)} kg·m/s
+  v₂ = p₂ / m = ${p2.toFixed(2)} / ${m2.toFixed(2)} = ${v2.toFixed(2)} m/s
+  Angle = tan⁻¹(p₂ᵧ / p₂ₓ) = ${(Math.atan2(p2y, p2x) * 180 / Math.PI).toFixed(2)}°`;
+      }
+    } else {
+      fragA.x += fragA.vx; fragA.y += fragA.vy;
+      fragB.x += fragB.vx; fragB.y += fragB.vy;
+      drawCircle(fragA); drawCircle(fragB);
+    }
+  }, 1000 / 60);
+}
+
+function drawVectorTriangle(p1x, p1y, p2x, p2y) {
+  triCtx.clearRect(0, 0, triCanvas.width, triCanvas.height);
+  const margin = 40;
+  const vectors = [
+    { x: p1x, y: -p1y, color: "red" },
+    { x: p2x, y: -p2y, color: "blue" }
+  ];
+  const total = { x: p1x + p2x, y: -(p1y + p2y), color: "purple" };
+
+  const maxLength = Math.max(...vectors.map(v => Math.hypot(v.x, v.y)), Math.hypot(total.x, total.y));
+  const scale = (triCanvas.height - 2 * margin) / maxLength;
+
+  let x1 = margin, y1 = triCanvas.height / 2;
+  let x2 = x1 + vectors[0].x * scale, y2 = y1 + vectors[0].y * scale;
+  drawArrow(triCtx, x1, y1, x2, y2, vectors[0].color);
+
+  let x3 = x2 + vectors[1].x * scale, y3 = y2 + vectors[1].y * scale;
+  drawArrow(triCtx, x2, y2, x3, y3, vectors[1].color);
+
+  drawArrow(triCtx, x1, y1, x3, y3, total.color);
+}
+</script>
+</body>
+</html>
