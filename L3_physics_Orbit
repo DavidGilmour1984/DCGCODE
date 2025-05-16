@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gravitational Orbit Simulator</title>
+  <style>
+    body {
+      font-family: Helvetica, sans-serif;
+      background-color: #f5f5f5;
+      padding: 20px;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      max-width: 1200px;
+      margin: auto;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 1em;
+      align-items: center;
+    }
+    .card-content {
+      display: flex;
+      gap: 2em;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .controls {
+      text-align: left;
+      font-size: 1rem;
+    }
+    .control-group {
+      margin-bottom: 1em;
+    }
+    .output, .formulas {
+      font-family: monospace;
+      margin-top: 1em;
+      font-size: 0.95rem;
+    }
+    button {
+      padding: 0.6em 1.2em;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+canvas {
+  background: #fff;
+  border: 1px solid #ccc;
+  width: 500px;
+  height: 500px;
+}
+
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Gravitational Orbit Simulator</h2>
+    <div class="card-content">
+      <div class="controls">
+        <div class="control-group">
+          <label>Mass of Planet (kg): <input type="number" id="planetMass" value="5.972e24"></label>
+        </div>
+        <div class="control-group">
+          <label>Mass of Satellite (kg): <input type="number" id="satelliteMass" value="1000"></label>
+        </div>
+        <div class="control-group">
+          <label>Orbital Altitude (km): <input type="number" id="orbitalAltitude" value="35786"></label>
+        </div>
+        <div class="control-group">
+          <label>Rotational Period of Planet (s): <input type="number" id="planetPeriod" value="86400"></label>
+        </div>
+        <div class="control-group">
+          <label>Rotational Period of Satellite (s): <input type="number" id="satellitePeriod" value="86400"></label>
+        </div>
+        <div class="control-group">
+          <label>Simulation Speed: <input type="range" id="simSpeed" min="1" max="10000" value="5000" oninput="simulationSpeed = parseFloat(this.value)"></label>
+        </div>
+        <button onclick="startSimulation()">Start Simulation</button>
+        <div class="formulas" id="formulas"></div>
+      </div>
+      <canvas id="orbitCanvas" width="500" height="500"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const G = 6.67430e-11;
+    const earthRadiusKm = 6371;
+    let angle = 0;
+    let planetRotation = 0;
+    let satelliteRotation = 0;
+    let animationId;
+    let simulationSpeed = parseFloat(document.getElementById("simSpeed").value);
+
+    const earthImg = new Image();
+    earthImg.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/The_Earth_seen_from_Apollo_17.jpg/240px-The_Earth_seen_from_Apollo_17.jpg";
+
+    function startSimulation() {
+      cancelAnimationFrame(animationId);
+      angle = 0;
+      planetRotation = 0;
+      satelliteRotation = 0;
+
+      const M = parseFloat(document.getElementById("planetMass").value);
+      const m = parseFloat(document.getElementById("satelliteMass").value);
+      const altitudeKm = parseFloat(document.getElementById("orbitalAltitude").value);
+      const R_km = earthRadiusKm + altitudeKm;
+      const r = R_km * 1000;
+      const satellitePeriod = parseFloat(document.getElementById("satellitePeriod").value);
+
+      // Fc = Fg → v² = GM/r
+      const v = Math.sqrt(G * M / r);
+      const Fc = m * v * v / r;
+      const T = 2 * Math.PI * r / v;
+
+
+document.getElementById("formulas").innerHTML =
+  `Earth Radius: Rₑ = ${earthRadiusKm} km<br>
+   Orbital Altitude: h = ${altitudeKm} km<br>
+   Total Orbital Radius: r = Rₑ + h = ${R_km} km = ${r.toExponential(2)} m<br><br>
+   Recognizing that Centripetal Force = Gravitational Force:<br>
+   F<sub>c</sub> = F<sub>g</sub><br>
+   m × v² / r = G × M × m / r<sup>2</sup><br>
+   → v² = G × M / r<br>
+   → v = √(G × M / r) = √(6.674×10<sup>-11</sup> × ${M} / ${r.toExponential(2)})<br>
+   = ${v.toFixed(2)} m/s<br><br>
+   Orbital Period: T = 2πr / v<br>
+   = 2π × ${r.toExponential(2)} / ${v.toFixed(2)}<br>
+   = ${T.toFixed(2)} s (${(T / 3600).toFixed(2)} hours)`;
+
+
+      animateOrbit(T, satellitePeriod);
+    }
+
+    function animateOrbit(orbitalPeriod, satellitePeriod) {
+      const canvas = document.getElementById("orbitCanvas");
+      const ctx = canvas.getContext("2d");
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const orbitRadius = 180;
+      const planetRadius = 60;
+      const angularVelocity = (2 * Math.PI) / orbitalPeriod;
+      const satelliteSpinVelocity = (2 * Math.PI) / satellitePeriod;
+
+      function drawFrame() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Orbit path
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, orbitRadius, 0, 2 * Math.PI);
+        ctx.strokeStyle = "#ccc";
+        ctx.stroke();
+
+        // Earth
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(planetRotation);
+        ctx.beginPath();
+        ctx.arc(0, 0, planetRadius, 0, 2 * Math.PI);
+        ctx.clip();
+        ctx.drawImage(earthImg, -planetRadius, -planetRadius, planetRadius * 2, planetRadius * 2);
+        ctx.restore();
+
+        // Satellite
+        const x = centerX + orbitRadius * Math.cos(angle);
+        const y = centerY + orbitRadius * Math.sin(angle);
+        const isGeostationary = Math.abs(orbitalPeriod - satellitePeriod) < 0.5;
+
+        ctx.save();
+        ctx.translate(x, y);
+        if (isGeostationary) {
+          ctx.rotate(angle + Math.PI); // face Earth
+        } else {
+          ctx.rotate(satelliteRotation);
+        }
+        ctx.fillStyle = "gray";
+        ctx.fillRect(-6, -4, 12, 8);
+        ctx.fillStyle = "#4444ff";
+        ctx.fillRect(-16, -2, 10, 4);
+        ctx.fillRect(6, -2, 10, 4);
+        ctx.restore();
+
+        angle += angularVelocity * 0.016 * simulationSpeed;
+        const planetSpinVelocity = (2 * Math.PI) / parseFloat(document.getElementById("planetPeriod").value);
+        planetRotation += planetSpinVelocity * 0.016 * simulationSpeed;
+        if (!isGeostationary) {
+          satelliteRotation += satelliteSpinVelocity * 0.016 * simulationSpeed;
+        }
+
+        animationId = requestAnimationFrame(drawFrame);
+      }
+
+      earthImg.onload = drawFrame;
+      if (earthImg.complete) drawFrame();
+    }
+
+    startSimulation();
+  </script>
+</body>
+</html>
