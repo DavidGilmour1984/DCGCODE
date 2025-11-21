@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Stocktake Box Component Editor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: Helvetica, Arial, sans-serif;
+      background: #f5f7fb;
+      margin: 0;
+      padding: 20px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 1100px;
+      margin: 0 auto 20px auto;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 24px;
+    }
+    h2, h3 {
+      margin-top: 0;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: 600;
+    }
+    input[type="file"],
+    select,
+    input[type="text"],
+    input[type="number"],
+    textarea {
+      margin-top: 5px;
+      padding: 6px 8px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    textarea {
+      resize: vertical;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .col {
+      flex: 1 1 200px;
+      min-width: 220px;
+    }
+    button {
+      margin-top: 15px;
+      padding: 8px 14px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+    }
+    .primary-btn {
+      background: #2563eb;
+      color: white;
+    }
+    .primary-btn:hover {
+      background: #1e40af;
+    }
+    .secondary-btn {
+      background: #e5e7eb;
+      color: #111827;
+    }
+    .secondary-btn:hover {
+      background: #d1d5db;
+    }
+    .status {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #4b5563;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 13px;
+      background: white;
+    }
+    th, td {
+      border: 1px solid #e5e7eb;
+      padding: 6px 8px;
+      text-align: left;
+    }
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+    }
+    td input {
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+      padding: 3px 4px;
+      font-size: 12px;
+    }
+    .small-btn {
+      padding: 4px 8px;
+      font-size: 12px;
+      border-radius: 6px;
+    }
+    .danger {
+      background: #dc2626;
+      color: white;
+    }
+    .danger:hover {
+      background: #b91c1c;
+    }
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+      align-items: center;
+    }
+    .tab-bar {
+      display: flex;
+      border-bottom: 1px solid #e5e7eb;
+      margin-bottom: 15px;
+      gap: 8px;
+    }
+    .tab-btn {
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: none;
+      background: #e5e7eb;
+      color: #111827;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .tab-btn.active {
+      background: #2563eb;
+      color: #ffffff;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .stat-card {
+      background: #f9fafb;
+      border-radius: 10px;
+      padding: 10px 12px;
+      border: 1px solid #e5e7eb;
+      font-size: 13px;
+    }
+    .stat-title {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Stocktake Box Component Editor</h1>
+
+  <label for="csvFileInput">1. Upload your box CSV (existing file)</label>
+  <input type="file" id="csvFileInput" accept=".csv">
+
+  <div class="status" id="statusText">
+    No file loaded yet. If you have used this tool before on this browser, it will auto-restore your last session.
+  </div>
+</div>
+
+<div class="card" id="editorCard" style="display:none;">
+
+  <!-- Tabs -->
+  <div class="tab-bar">
+    <button id="tabEdit" class="tab-btn active">Edit Inventory</button>
+    <button id="tabSearch" class="tab-btn">Search &amp; Stats</button>
+  </div>
+
+  <!-- EDIT MODE -->
+  <div id="editSection">
+    <h2>2. Add / Edit Components in Boxes</h2>
+
+    <div class="row">
+      <div class="col">
+        <label for="boxSearchInput">Search boxes</label>
+        <input type="text" id="boxSearchInput" placeholder="Start typing a box name…">
+      </div>
+      <div class="col">
+        <label for="boxSelect">Select existing box</label>
+        <select id="boxSelect"></select>
+      </div>
+      <div class="col">
+        <label for="newBoxInput">Or add a new box</label>
+        <input type="text" id="newBoxInput" placeholder="New box name">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <label for="componentInput">Component name</label>
+        <input type="text" id="componentInput" placeholder="e.g. AD822A">
+      </div>
+      <div class="col">
+        <label for="descriptionInput">Description</label>
+        <input type="text" id="descriptionInput" placeholder="e.g. high-precision instrumentation amp">
+      </div>
+      <div class="col">
+        <label for="quantityInput">Quantity</label>
+        <input type="number" id="quantityInput" min="0" step="1" placeholder="e.g. 8">
+      </div>
+    </div>
+
+    <div class="button-row">
+      <button class="primary-btn" id="addItemBtn">Add Component to Box</button>
+      <button class="secondary-btn" id="togglePasteAreaBtn">Show/Hide paste area</button>
+      <button class="primary-btn" id="applyPasteBtn">Add Pasted Items to Box</button>
+      <button class="secondary-btn" id="downloadBtn">Export CSV</button>
+    </div>
+
+    <div id="pasteArea" style="display:none; margin-top:15px;">
+      <label for="pasteTextarea">
+        Paste rows from your spreadsheet (e.g. <em>Component&nbsp;&nbsp;Description&nbsp;&nbsp;Quantity</em>).
+      </label>
+      <textarea id="pasteTextarea" rows="6"
+        placeholder="Example:
+AD822A    high-precision, low power instrumentation amplifier    8
+LM339     Quad Differential Comparators                          50"></textarea>
+      <div class="status">
+        Parser rules:
+        <ul>
+          <li>Works with tab or comma separated data (Excel / Sheets copy-paste).</li>
+          <li>If the <strong>last column is a whole number</strong>, it is treated as the quantity.</li>
+          <li>If the <strong>first column is a whole number</strong>, that becomes quantity instead.</li>
+          <li>The remaining text is split into <strong>Component</strong> (first piece) and <strong>Description</strong> (rest).</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="status" id="boxInfo"></div>
+
+    <h3 style="margin-top:20px;">Current Items in Selected Box</h3>
+    <table id="itemsTable">
+      <thead>
+        <tr>
+          <th style="width:20%;">Box</th>
+          <th style="width:25%;">Component</th>
+          <th style="width:35%;">Description</th>
+          <th style="width:10%;">Quantity</th>
+          <th style="width:10%;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="itemsTbody">
+      </tbody>
+    </table>
+
+    <div class="status">
+      All changes are automatically saved in this browser.  
+      Use “Export CSV” if you want to update your master file.
+    </div>
+  </div>
+
+  <!-- SEARCH & STATS MODE -->
+  <div id="searchSection" style="display:none;">
+    <h2>Search &amp; Statistics</h2>
+
+    <h3>Category statistics (by first word in box label)</h3>
+    <div id="statsContainer" class="stats-grid">
+      <!-- Stats cards injected here -->
+    </div>
+
+    <h3 style="margin-top:20px;">Global search</h3>
+    <label for="globalSearchInput">Search by part number, description, or box</label>
+    <input type="text" id="globalSearchInput" placeholder="e.g. LM339, op amp, 433MHz, GPS">
+
+    <table id="searchResultsTable">
+      <thead>
+        <tr>
+          <th style="width:20%;">Box</th>
+          <th style="width:25%;">Component</th>
+          <th style="width:35%;">Description</th>
+          <th style="width:10%;">Quantity</th>
+          <th style="width:10%;">Jump</th>
+        </tr>
+      </thead>
+      <tbody id="searchResultsBody">
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = "stocktakeInventoryV1";
+
+  let boxes = new Set();   // Set of box names
+  let items = [];          // Array of { box, component, description, quantity }
+  let originalFileName = "stocktake_boxes.csv";
+  let currentBox = "";     // Currently selected box
+  let currentTab = "edit"; // "edit" or "search"
+
+  document.getElementById('csvFileInput').addEventListener('change', handleFileUpload);
+  document.getElementById('addItemBtn').addEventListener('click', addItem);
+  document.getElementById('downloadBtn').addEventListener('click', exportCSV);
+  document.getElementById('togglePasteAreaBtn').addEventListener('click', togglePasteArea);
+  document.getElementById('applyPasteBtn').addEventListener('click', applyPasteItems);
+  document.getElementById('boxSelect').addEventListener('change', handleBoxChange);
+  document.getElementById('boxSearchInput').addEventListener('input', handleBoxSearch);
+  document.getElementById('globalSearchInput').addEventListener('input', renderSearchResults);
+
+  document.getElementById('tabEdit').addEventListener('click', () => switchTab('edit'));
+  document.getElementById('tabSearch').addEventListener('click', () => switchTab('search'));
+
+  // Try to restore from localStorage on load
+  tryRestoreFromLocalStorage();
+
+  // --- Tabs ---
+
+  function switchTab(name) {
+    currentTab = name;
+
+    const tabEdit = document.getElementById('tabEdit');
+    const tabSearch = document.getElementById('tabSearch');
+    const editSection = document.getElementById('editSection');
+    const searchSection = document.getElementById('searchSection');
+
+    if (name === 'edit') {
+      tabEdit.classList.add('active');
+      tabSearch.classList.remove('active');
+      editSection.style.display = 'block';
+      searchSection.style.display = 'none';
+      renderItemsTable();
+    } else {
+      tabEdit.classList.remove('active');
+      tabSearch.classList.add('active');
+      editSection.style.display = 'none';
+      searchSection.style.display = 'block';
+      renderStats();
+      renderSearchResults();
+    }
+  }
+
+  // --- Auto-save / restore ---
+
+  function saveToLocalStorage() {
+    try {
+      const data = {
+        boxes: Array.from(boxes),
+        items: items,
+        originalFileName: originalFileName,
+        currentBox: currentBox
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.warn("Unable to save to localStorage:", e);
+    }
+  }
+
+  function tryRestoreFromLocalStorage() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (!data || !Array.isArray(data.items)) return;
+
+      boxes = new Set(data.boxes || []);
+      items = data.items || [];
+      originalFileName = data.originalFileName || "stocktake_boxes.csv";
+      currentBox = data.currentBox || (data.boxes && data.boxes[0]) || "";
+
+      renderBoxSelect();
+      renderItemsTable();
+      renderStats();
+      renderSearchResults();
+      document.getElementById('editorCard').style.display = 'block';
+      setStatus("Restored last session from browser storage. You can still import a CSV to replace it.");
+    } catch (e) {
+      console.warn("Unable to restore from localStorage:", e);
+    }
+  }
+
+  // --- File handling ---
+
+  function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    originalFileName = file.name || "stocktake_boxes.csv";
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const text = e.target.result;
+      loadFromCSVText(text);
+    };
+    reader.readAsText(file);
+  }
+
+  function loadFromCSVText(csvText) {
+    boxes = new Set();
+    items = [];
+    currentBox = "";
+
+    const rows = parseCSV(csvText);
+    if (!rows.length) {
+      setStatus("CSV appears to be empty.");
+      document.getElementById('editorCard').style.display = 'none';
+      return;
+    }
+
+    const headers = rows[0].map(h => (h || "").trim().toLowerCase());
+    const hasNormalised =
+      headers.includes("box") && headers.includes("component");
+
+    if (hasNormalised) {
+      loadNormalised(rows);
+      setStatus("Loaded existing Box/Component CSV.");
+    } else {
+      loadFromOriginalLayout(rows);
+      setStatus("Loaded box list from original layout CSV. You can now attach components.");
+    }
+
+    const boxArray = Array.from(boxes).sort((a, b) => a.localeCompare(b));
+    if (boxArray.length > 0) {
+      currentBox = boxArray[0];
+    }
+
+    renderBoxSelect();
+    renderItemsTable();
+    renderStats();
+    renderSearchResults();
+    document.getElementById('editorCard').style.display = 'block';
+
+    saveToLocalStorage();
+  }
+
+  function loadNormalised(rows) {
+    const headerRow = rows[0];
+    const boxIdx = headerRow.findIndex(h => (h || "").trim().toLowerCase() === "box");
+    const compIdx = headerRow.findIndex(h => (h || "").trim().toLowerCase() === "component");
+    const descIdx = headerRow.findIndex(h => (h || "").trim().toLowerCase() === "description");
+    const qtyIdx  = headerRow.findIndex(h => (h || "").trim().toLowerCase() === "quantity");
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const box = boxIdx >= 0 ? (row[boxIdx] || "").trim() : "";
+      const component = compIdx >= 0 ? (row[compIdx] || "").trim() : "";
+      const description = descIdx >= 0 ? (row[descIdx] || "").trim() : "";
+      const quantity = qtyIdx >= 0 ? (row[qtyIdx] || "").trim() : "";
+
+      if (!box && !component && !description && !quantity) continue;
+
+      if (box) boxes.add(box);
+      items.push({ box, component, description, quantity });
+    }
+  }
+
+  function loadFromOriginalLayout(rows) {
+    const seenBoxes = new Set();
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      for (let j = 0; j < row.length; j++) {
+        const val = (row[j] || "").trim();
+        if (val && !seenBoxes.has(val)) {
+          seenBoxes.add(val);
+          boxes.add(val);
+          items.push({ box: val, component: "", description: "", quantity: "" });
+        }
+      }
+    }
+  }
+
+  // --- Box selection and search (edit mode) ---
+
+  function handleBoxChange() {
+    const select = document.getElementById('boxSelect');
+    currentBox = select.value || "";
+    renderItemsTable();
+    saveToLocalStorage();
+  }
+
+  function handleBoxSearch() {
+    const filterText = (document.getElementById('boxSearchInput').value || "").trim().toLowerCase();
+    renderBoxSelect(filterText);
+    renderItemsTable();
+  }
+
+  function renderBoxSelect(filterText = "") {
+    const select = document.getElementById('boxSelect');
+    const boxArray = Array.from(boxes).sort((a, b) => a.localeCompare(b));
+
+    const filtered = boxArray.filter(b =>
+      !filterText || b.toLowerCase().includes(filterText)
+    );
+
+    if (!filtered.length) {
+      select.innerHTML = '<option value="">No boxes found</option>';
+      document.getElementById('boxInfo').innerText = "No box names match the search.";
+      return;
+    }
+
+    let optionsHtml = "";
+    filtered.forEach(b => {
+      const selectedAttr = (b === currentBox) ? ' selected' : '';
+      optionsHtml += `<option value="${escapeHtml(b)}"${selectedAttr}>${escapeHtml(b)}</option>`;
+    });
+    select.innerHTML = optionsHtml;
+
+    if (!filtered.includes(currentBox)) {
+      currentBox = filtered[0];
+      select.value = currentBox;
+    }
+
+    document.getElementById('boxInfo').innerText =
+      `Loaded ${boxArray.length} box(es). Showing items for: "${currentBox}".`;
+  }
+
+  // --- Items table (edit mode) ---
+
+  function renderItemsTable() {
+    const tbody = document.getElementById('itemsTbody');
+    tbody.innerHTML = "";
+
+    const visibleItems = items
+      .map((item, index) => ({ ...item, index }))
+      .filter(it =>
+        it.box &&
+        it.component &&
+        (!currentBox || it.box === currentBox)
+      );
+
+    if (!visibleItems.length) {
+      tbody.innerHTML = '<tr><td colspan="5">No components added yet for this box.</td></tr>';
+      return;
+    }
+
+    for (const it of visibleItems) {
+      const tr = document.createElement('tr');
+
+      const tdBox = document.createElement('td');
+      tdBox.textContent = it.box;
+      tr.appendChild(tdBox);
+
+      const tdComp = document.createElement('td');
+      tdComp.innerHTML =
+        `<input type="text" value="${escapeHtml(it.component)}"
+                 oninput="updateItemField(${it.index}, 'component', this.value)">`;
+      tr.appendChild(tdComp);
+
+      const tdDesc = document.createElement('td');
+      tdDesc.innerHTML =
+        `<input type="text" value="${escapeHtml(it.description)}"
+                 oninput="updateItemField(${it.index}, 'description', this.value)">`;
+      tr.appendChild(tdDesc);
+
+      const tdQty = document.createElement('td');
+      tdQty.innerHTML =
+        `<input type="number" min="0" step="1" value="${escapeHtml(it.quantity)}"
+                 oninput="updateItemField(${it.index}, 'quantity', this.value)">`;
+      tr.appendChild(tdQty);
+
+      const tdAct = document.createElement('td');
+      tdAct.innerHTML =
+        `<button class="small-btn danger" onclick="deleteItem(${it.index})">Delete</button>`;
+      tr.appendChild(tdAct);
+
+      tbody.appendChild(tr);
+    }
+  }
+
+  // --- Item operations (global for inline handlers) ---
+
+  window.updateItemField = function(index, field, value) {
+    if (!items[index]) return;
+    items[index][field] = value;
+    saveToLocalStorage();
+  };
+
+  window.deleteItem = function(index) {
+    if (!items[index]) return;
+    items.splice(index, 1);
+    renderItemsTable();
+    renderStats();
+    renderSearchResults();
+    saveToLocalStorage();
+  };
+
+  function addItem() {
+    let box = (document.getElementById('boxSelect').value || "").trim();
+    const newBox = (document.getElementById('newBoxInput').value || "").trim();
+    const component = (document.getElementById('componentInput').value || "").trim();
+    const description = (document.getElementById('descriptionInput').value || "").trim();
+    const quantity = (document.getElementById('quantityInput').value || "").trim();
+
+    if (newBox) {
+      box = newBox;
+    }
+
+    if (!box) {
+      alert("Please select or enter a box name.");
+      return;
+    }
+    if (!component) {
+      alert("Please enter a component name.");
+      return;
+    }
+
+    boxes.add(box);
+    currentBox = box;
+
+    items.push({ box, component, description, quantity });
+
+    document.getElementById('newBoxInput').value = "";
+    document.getElementById('componentInput').value = "";
+    document.getElementById('descriptionInput').value = "";
+    document.getElementById('quantityInput').value = "";
+
+    const searchText = (document.getElementById('boxSearchInput').value || "").trim().toLowerCase();
+    renderBoxSelect(searchText);
+    renderItemsTable();
+    renderStats();
+    renderSearchResults();
+    saveToLocalStorage();
+  }
+
+  // --- Paste area ---
+
+  function togglePasteArea() {
+    const div = document.getElementById('pasteArea');
+    div.style.display = (div.style.display === "none" || !div.style.display) ? "block" : "none";
+  }
+
+  function applyPasteItems() {
+    let box = (document.getElementById('boxSelect').value || "").trim();
+    const newBox = (document.getElementById('newBoxInput').value || "").trim();
+    const text = document.getElementById('pasteTextarea').value;
+
+    if (newBox) {
+      box = newBox;
+    }
+    if (!box) {
+      alert("Please select or enter a box name before pasting items.");
+      return;
+    }
+    if (!text.trim()) {
+      alert("Paste some rows first.");
+      return;
+    }
+
+    const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+    let addedCount = 0;
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line) continue;
+
+      let tokens = line.split(/\t|,/).map(t => t.trim()).filter(t => t !== "");
+      if (!tokens.length) continue;
+
+      let quantity = "";
+      let qtyIdx = -1;
+
+      for (let i = tokens.length - 1; i >= 0; i--) {
+        if (/^[0-9]+$/.test(tokens[i])) {
+          qtyIdx = i;
+          break;
+        }
+      }
+
+      if (qtyIdx !== -1) {
+        quantity = tokens[qtyIdx];
+        tokens.splice(qtyIdx, 1);
+      }
+
+      let component = "";
+      let description = "";
+
+      if (tokens.length === 1) {
+        component = tokens[0];
+        description = "";
+      } else if (tokens.length >= 2) {
+        component = tokens[0];
+        description = tokens.slice(1).join(" ");
+      }
+
+      if (!component) continue;
+
+      boxes.add(box);
+      items.push({ box, component, description, quantity });
+      addedCount++;
+    }
+
+    if (addedCount === 0) {
+      alert("No valid rows were found in the pasted text.");
+    }
+
+    document.getElementById('pasteTextarea').value = "";
+    currentBox = box;
+
+    const searchText = (document.getElementById('boxSearchInput').value || "").trim().toLowerCase();
+    renderBoxSelect(searchText);
+    renderItemsTable();
+    renderStats();
+    renderSearchResults();
+    saveToLocalStorage();
+  }
+
+  // --- Stats (search tab) ---
+
+  // Category is the FIRST WORD of the box name (cleaned)
+  function categoryFromBox(box) {
+    if (!box) return "Unknown";
+    const firstWord = box.trim().split(/\s+/)[0];
+    const clean = firstWord.replace(/[^A-Za-z0-9]/g, '');
+    if (!clean) return "Unknown";
+    return clean; // keep original-style casing (SMD, TH, MOD, Project, Hardware, etc.)
+  }
+
+  function renderStats() {
+    const statsContainer = document.getElementById('statsContainer');
+    statsContainer.innerHTML = "";
+
+    const categories = {};
+
+    const visibleItems = items.filter(it => it.box && it.component);
+
+    for (const it of visibleItems) {
+      const cat = categoryFromBox(it.box);
+      if (!categories[cat]) {
+        categories[cat] = {
+          boxes: new Set(),
+          components: new Set(),
+          totalQty: 0
+        };
+      }
+      categories[cat].boxes.add(it.box);
+      categories[cat].components.add(it.component);
+
+      const q = parseInt(it.quantity, 10);
+      if (!isNaN(q)) {
+        categories[cat].totalQty += q;
+      }
+    }
+
+    const catNames = Object.keys(categories).sort();
+
+    if (!catNames.length) {
+      statsContainer.innerHTML =
+        '<div class="stat-card"><div class="stat-title">No data</div><div>Add items in Edit Inventory to see statistics.</div></div>';
+      return;
+    }
+
+    for (const cat of catNames) {
+      const data = categories[cat];
+
+      const card = document.createElement('div');
+      card.className = "stat-card";
+
+      card.innerHTML =
+        `<div class="stat-title">${cat}</div>
+         <div>Boxes: ${data.boxes.size}</div>
+         <div>Unique items: ${data.components.size}</div>
+         <div>Total quantity: ${data.totalQty}</div>`;
+
+      statsContainer.appendChild(card);
+    }
+  }
+
+  // --- Global search (search tab) ---
+
+  function renderSearchResults() {
+    const tbody = document.getElementById('searchResultsBody');
+    tbody.innerHTML = "";
+
+    const query = (document.getElementById('globalSearchInput').value || "").trim().toLowerCase();
+
+    const visibleItems = items.filter(it => it.box && it.component);
+    const matched = visibleItems.filter(it => {
+      if (!query) return true;
+      const haystack =
+        (it.box || "").toLowerCase() + " " +
+        (it.component || "").toLowerCase() + " " +
+        (it.description || "").toLowerCase();
+      return haystack.includes(query);
+    });
+
+    if (!matched.length) {
+      tbody.innerHTML = '<tr><td colspan="5">No matching items found.</td></tr>';
+      return;
+    }
+
+    for (const it of matched) {
+      const tr = document.createElement('tr');
+
+      const tdBox = document.createElement('td');
+      tdBox.textContent = it.box;
+      tr.appendChild(tdBox);
+
+      const tdComp = document.createElement('td');
+      tdComp.textContent = it.component;
+      tr.appendChild(tdComp);
+
+      const tdDesc = document.createElement('td');
+      tdDesc.textContent = it.description || "";
+      tr.appendChild(tdDesc);
+
+      const tdQty = document.createElement('td');
+      tdQty.textContent = it.quantity || "";
+      tr.appendChild(tdQty);
+
+      const tdJump = document.createElement('td');
+      tdJump.innerHTML =
+        `<button class="small-btn secondary-btn" onclick="jumpToBox('${escapeHtml(it.box)}')">Edit</button>`;
+      tr.appendChild(tdJump);
+
+      tbody.appendChild(tr);
+    }
+  }
+
+  window.jumpToBox = function(boxName) {
+    if (!boxName) return;
+    currentBox = boxName;
+
+    const searchText = (document.getElementById('boxSearchInput').value || "").trim().toLowerCase();
+    renderBoxSelect(searchText);
+    renderItemsTable();
+
+    switchTab('edit');
+    const editorCard = document.getElementById('editorCard');
+    if (editorCard && editorCard.scrollIntoView) {
+      editorCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // --- CSV export (on demand only) ---
+
+  function exportCSV() {
+    if (!items.length) {
+      alert("No rows to export.");
+      return;
+    }
+
+    const header = ["Box", "Component", "Description", "Quantity"];
+    const lines = [];
+    lines.push(header.join(","));
+
+    for (const it of items) {
+      const row = [
+        csvEscape(it.box || ""),
+        csvEscape(it.component || ""),
+        csvEscape(it.description || ""),
+        csvEscape(it.quantity || "")
+      ].join(",");
+      lines.push(row);
+    }
+
+    const csvText = lines.join("\n");
+    const blob = new Blob([csvText], { type: "text/csv;charset=utf-8;" });
+
+    const downloadName = originalFileName || "stocktake_boxes.csv";
+
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", downloadName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  // --- Helpers ---
+
+  function setStatus(msg) {
+    document.getElementById('statusText').innerText = msg;
+  }
+
+  function parseCSV(text) {
+    const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+    const rows = [];
+    for (const line of lines) {
+      if (line.trim() === "") continue;
+      const cols = line.split(","); // box labels have no commas now
+      rows.push(cols);
+    }
+    return rows;
+  }
+
+  function csvEscape(value) {
+    if (value == null) value = "";
+    const needsQuotes = /[",\n]/.test(value);
+    let out = value.replace(/"/g, '""');
+    if (needsQuotes) {
+      out = `"${out}"`;
+    }
+    return out;
+  }
+
+  function escapeHtml(str) {
+    if (str == null) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+</script>
+
+</body>
+</html>
