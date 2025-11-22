@@ -1,0 +1,342 @@
+Box,Component,Description,Quantity
+SMD 0402 Resistors,4.7k,Resistor,500
+SMD 0402 Resistors,2.2k,Resistor,500
+SMD 0402 Resistors,3.3k,Resistor,500
+SMD 0402 Resistors,1.5k,Resistor,500
+SMD 0603 Resistor Array Capacitors Inductors,24nH,Inductor,150
+SMD 0603 Resistor Array Capacitors Inductors,180nH,Inductor,100
+SMD 0603 Resistor Array Capacitors Inductors,47nH,Inductor,50
+SMD 0603 Resistor Array Capacitors Inductors,100nH,Inductor,50
+SMD 0603 Resistor Array Capacitors Inductors,56nH,Inductor,50
+SMD 0603 Resistor Array Capacitors Inductors,4.7nH,Inductor,200
+SMD 0603 Resistor Array Capacitors Inductors,33nH,Inductor,100
+SMD 0603 Resistor Array Capacitors Inductors,100nF,capacitor,200
+SMD 0603 Resistor Array Capacitors Inductors,10k,resistor,200
+SMD 0603 Resistor Array Capacitors Inductors,1k,resistor,200
+SMD 0603 Resistor Array Capacitors Inductors,8.2k,resistor,100
+SMD 0603 Resistor Array Capacitors Inductors,1.5k,resistor,100
+SMD 0603 Resistor Array Capacitors Inductors,12k,resistor,100
+SMD USB to UART,CH340C,USB to UART bridge chip integrated crystal low power supports 5V and 3.3V operation ideal for compact MCU boards,48
+SMD USB to UART,CH340E,USB to UART bridge chip ultra small package integrated crystal supports 1.8V to 3.3V IO minimal external components,40
+SMD USB to UART,CH340G,USB to UART bridge chip classic full speed USB requires external crystal widely used on Arduino clones and dev boards,5
+SMD 18650 1S,,,
+,,,
+SMD ATmega328 RP2040,ATmega328P-AU,AVR Microcontroller,9
+SMD ATmega328 RP2040,RP2040,Microcontroller,30
+SMD AtTiny85 AtTiny13 (&TH),,,
+SMD Buzzer,,,
+SMD Coin Cell Holder,,,
+SMD Crystals,16MHz crystal,Crystal,30
+SMD Crystals,12MHz crystal,Crystal,10
+SMD Crystals,12MHz crystal,Crystal,40
+SMD Crystals,HY40MSMD3225B1R30,40MHz crystal,
+SMD ESP Modules,ESP8233F,ESP8266 Module,17
+SMD ESP Modules,ESP32C3 Chips,,15
+SMD ESP Modules,ESP32S,,5
+SMD ESP Modules,ESP32D,,5
+SMD ESP Modules,ESP32E,,5
+SMD ESP Modules,ESP32UE,,5
+SMD ESP Modules,Aerials,(For ESP modules),8
+SMD Flash Memory,128Mbit Flash,Flash,30
+SMD Flash Memory,Winbond 25Q128JVsQ,Flash,20
+SMD Fuse PTC,1206 PTC,0.05A PTC,50
+SMD Fuse PTC,1206 PTC,0.5A PTC,50
+SMD Fuse PTC,1206 Fuse,5A,40
+SMD Fuse PTC,2920 PTC,5A,50
+SMD Fuse PTC,2921 PTC,3A,50
+SMD H-Bridge Drivers (&TH),DRV8833PWPR,Dual H bridge motor driver 1.8V to 11V supply up to 1.5A per channel thermal protection low RDSon,20
+SMD H-Bridge Drivers (&TH),DRV8871,Single H bridge motor driver 6.5V to 45V supply up to 3.6A peak integrated current regulation fault protection,20
+SMD H-Bridge Drivers (&TH),TC4427,Dual MOSFET gate driver 1.5A source sink high speed push pull ideal for switching power FETs,10
+SMD H-Bridge Drivers (&TH),DRV8872,Single H bridge motor driver 4.5V to 37V up to 3.6A peak integrated current sense and protection features,20
+SMD Input IC,AD822A,Precision instrumentation amplifier low noise high CMRR rail to rail output suitable for bridge sensors,8
+SMD Input IC,LM339,Quad voltage comparator open collector outputs wide supply range high input impedance,50
+SMD Input IC,LM393,Dual voltage comparator open collector low power fast response,50
+SMD Input IC,LM358,Dual operational amplifier wide supply range single supply capable general purpose amplifier,50
+SMD Input IC,NE555,Timer IC astable and monostable modes high drive output wide supply range,50
+SMD Input IC,NE555 DIP,Timer IC through hole version identical electrical characteristics,50
+SMD Input IC,CM2038A,Low distortion audio amplifier suitable for small speaker drive,5
+SMD Input IC,UA741CP,Classic general purpose operational amplifier high input impedance low cost,2
+SMD Input IC,INA125P,Instrumentation amplifier with precision voltage reference ideal for load cells,2
+SMD Input IC,TL1677,Low noise operational amplifier low offset rail to rail output stable at unity gain,3
+SMD Input IC,ADS1230,Twenty bit delta sigma ADC high resolution designed for load cell and precision scale applications,5
+SMD Input IC,ASD1220,Twenty four bit delta sigma ADC ultra low noise single or dual channel precision measurement,5
+SMD Input IC,TLE2072ACP,JFET input operational amplifier low noise high slew rate high input impedance,8
+SMD Input IC,OPA192,Rail to rail operational amplifier low offset low drift precision high voltage input tolerance,10
+SMD Input IC,MCP3008 SMD,Ten bit eight channel SPI ADC SMD version 2.7V to 5.5V supply,20
+SMD Input IC,MCP3008 DIP,Ten bit eight channel SPI ADC DIP version identical performance,15
+SMD Input IC,MCP3208 DIP,Twelve bit eight channel SPI ADC DIP version low power single supply,10
+SMD Input IC,HX711,Twenty four bit load cell ADC built in PGA low noise differential inputs,20
+SMD Input IC,MAX6675,Thermocouple ADC K type support cold junction compensation SPI digital output,10
+SMD Input IC,TTP223-BA6,Capacitive touch sensor digital output low standby power auto calibration,49
+SMD Input IC,AK09970,Three axis magnetic sensor ultra low noise ideal for compass and orientation applications,2
+SMD Input IC,INA260,Current and voltage sensor with integrated precision shunt I2C digital output,10
+SMD Input IC,DS3231SN,Real time clock temperature compensated crystal extremely high accuracy battery backup support,10
+SMD Li-Po charge controllers,DW01A,Lithium ion battery protection IC overcharge over discharge and short circuit protection,40
+SMD Li-Po charge controllers,MCP73831T,Lithium battery charger single cell constant current constant voltage operation,50
+SMD Li-Po charge controllers,TP4054,Single cell lithium battery charger linear constant current up to 800mA,30
+SMD Li-Po charge controllers,TP4056E,Lithium battery charger with integrated protection module support micro USB input,10
+SMD LORA modules,SMD rat tails,,9
+SMD LORA modules,8 header pins,,2
+SMD LORA modules,DIP pins,,4
+SMD LORA modules,3m aerials,No board,4
+SMD Mosfet,ME60NO3,N channel mosfet 25V 50A logic gate 1.0V to 2.5V VGS,10
+SMD Mosfet,FQD50N06,N channel mosfet 50A logic gate 2V to 4V VGS,10
+SMD Mosfet,DMN3404L-7,N channel mosfet low gate drive suitable for logic level switching,50
+SMD Mosfet,AO3401A,P channel mosfet logic gate minus 1.0V to minus 3.0V VGS,50
+SMD Mosfet,AOD4184,N channel mosfet 50A low VGS 1V to 3V ideal for high current switching,50
+SMD Mosfet,SM3407SRL,N channel mosfet logic level 1V to 2.5V VGS,—
+SMD Mosfet,IRL74843,N channel mosfet 75A ultra low VGS 1V to 2.5V suitable for high current loads,100
+SMD Mosfet,SI2300,N channel mosfet low gate threshold 0.6V to 1.2V VGS,—
+SMD Mosfet,BSS138,N channel mosfet 0.5V to 1.5V VGS common for logic level shifting,300
+SMD Output IC,HT12E,Four bit wireless encoder IC RF encoding,5
+SMD Output IC,HT12D,Four bit wireless decoder IC RF decoding,5
+SMD Output IC,PAM8403,Three watt class D audio amplifier module,10
+SMD Output IC,PCF8575TS,Sixteen bit I2C IO expander two eight bit ports,5
+SMD Output IC,HG7881,Dual H bridge DC motor driver L9110 module,10
+SMD Output IC,PCF8574AT,Eight bit I2C IO expander,10
+SMD Output IC,MCP23017,Sixteen bit I2C GPIO expander,40
+SMD Output IC,MCP23008,Eight bit I2C GPIO expander,40
+SMD Output IC,TXS0108E,Eight channel bidirectional logic level shifter,20
+SMD Output IC,PCM510,PCM510 series audio DAC low noise digital to analog converter,10
+SMD Rectifier Diode Inductor,1N54819W,Schottky diode 40V 1A,200
+SMD Rectifier Diode Inductor,SS12,Schottky diode 20V 1A,100
+SMD Rectifier Diode Inductor,SS34,Schottky diode 40V 3A,—
+SMD Rectifier Diode Inductor,MB10F,Bridge rectifier 1A 1000V,20
+SMD Rectifier Diode Inductor,GSDR32P-2R2M,2.2 uH power inductor,50
+SMD Rectifier Diode Inductor,27 uH 1206,27 uH SMD inductor 1206,50
+SMD Rectifier Diode Inductor,1N4148W,High speed signal diode,600
+SMD Rectifier Diode Inductor,1N4001,Rectifier diode 50V 1A,200
+SMD SD card,,,
+SMD Sensor Chips,SS49E,Linear Hall effect sensor analog output proportional to magnetic field 4.5–6.0 V input,49
+SMD Sensor Chips,BMP280,Digital barometric pressure and temperature sensor I2C or SPI 300–1100 hPa high accuracy,40
+SMD Sensor Chips,MPU-6040,Six axis IMU with three axis accelerometer and three axis gyroscope using I2C interface,10
+SMD Sensor Chips,Quectel L80-R,GPS receiver module with integrated patch antenna fast cold start MTK chipset,10
+SMD Sensor Chips,AS7345,Fourteen channel spectral color sensor UV to NIR high resolution for color analysis,1
+SMD Sensor Chips,TMET6000,Ambient light sensor module analog output proportional to visible light,100
+SMD Sensor Chips,VBW34S,High speed silicon PIN photodiode visible and near IR detection,42
+SMD Sensor Chips,BPW34FAS,High sensitivity photodiode large active area low dark current,5
+SMD Sensor Chips,PT0603,0603 SMD photoresistor light dependent resistor resistance decreases with light,200
+SMD Sensor Chips,SPL06-001,High precision digital barometric sensor I2C interface 0.06 hPa resolution,50
+SMD Switches Buttons,,,
+SMD Transistors,MMBT3904,"NPN Transistor, 200 mA, 40 V",300
+SMD Transistors,MMBT2222,SMD version of the 2N2222 NPN BJT,300
+SMD Transistors,SS8550 Y2,PNP Bipolar Junction Transistor,50
+SMD Transistors,S8050,NPN BJT 25V 500mA,100
+SMD Transistors,BC847A,45V 300mW 110@2mA 5V,200
+SMD Transistors,S8550 2TY,PNP Bipolar Junction Transistor,100
+SMD USB Socket,,,
+SMD Voltage Regulators,ME2108A50PG,5.0V boost converter 1.2MHz switching high efficiency up to 95 percent low quiescent current wide input range 0.9V to 5V ideal for single cell lithium or AA boost applications,25
+SMD Voltage Regulators,ME2108A33PG,3.3V boost converter 1.2MHz switching high efficiency up to 94 percent low quiescent current wide input range 0.9V to 5V stable with small ceramic capacitors ideal for battery powered circuits,45
+SMD Voltage Regulators,AMS1117-3.3,3.3V linear regulator 800mA low dropout typically 1.1V dropout protection features thermal shutdown and short circuit protection SOT223 package stable with 10uF output capacitor,49
+SMD Voltage Regulators,AMS1117-1.5,1.5V linear regulator 800mA low dropout typically 1.1V dropout SOT223 package thermal protection required for heat dissipation stable regulation for logic rails,10
+SMD Voltage Regulators,AMS1117-2.5,2.5V linear regulator 800mA low dropout typically 1.1V dropout SOT223 package suitable for mixed logic supply systems low noise,20
+SMD Voltage Regulators,AMS1117-1.2,1.2V linear regulator 800mA low dropout typically 1.1V dropout SOT223 package ideal for core voltage rails and low voltage logic,50
+SMD Voltage Regulators,AMS1117-ADJ,Adjustable linear regulator 800mA output voltage range 1.25V to 5.0V requires external resistor divider dropout typically 1.1V built in thermal and overcurrent protection,20
+SMD Voltage Regulators,AMS1117-5.0,5.0V linear regulator 800mA low dropout typically 1.1V dropout SOT223 package widely used for powering sensors wireless modules and logic systems,95
+SMD Voltage Regulators,662k-3.3,3.3V SOT23 low dropout regulator 500mA dropout typically 250mV at 500mA ultra low quiescent current internal current limiting and thermal protection,98
+SMD Voltage Regulators,TLV1117-33,3.3V low dropout regulator 800mA dropout typically 1.0V low output noise high accuracy one percent tolerance SOT223 package excellent for analog and RF subsystems,50
+SMD 3x3 Potentiometer,1K,3x3 Potentiometer,30
+SMD 3x3 Potentiometer,10K,3x3 Potentiometer,49
+SMD 3x3 Potentiometer,50K,3x3 Potentiometer,30
+SMD 3x3 Potentiometer,500K,3x3 Potentiometer,10
+SMD 3x3 Potentiometer,5K,3x3 Potentiometer,10
+SMD 3x3 Potentiometer,200r,3x3 Potentiometer,10
+SMD 3x3 Potentiometer,500r,3x3 Potentiometer,10
+SMD 3x3 Potentiometer,20k,3x3 Potentiometer,10
+SMD 3x3 Potentiometer,1M,3x3 Potentiometer,10
+SMD 3x3 Potentiometer,200k,3x3 Potentiometer,10
+SMD 3x3 Potentiometer,100k,3x3 Potentiometer,10
+SMD 3x3 Potentiometer,100r,3x3 Potentiometer,10
+SMD 3x3 Potentiometer,2k',3x3 Potentiometer,10
+MOD 8CH Relay Boards,8CH relay boards,High-voltage relay board,4
+MOD Accelerometers Compass,GY-271,Three axis magnetometer module based on the HMC5883L digital compass sensor,2
+MOD Accelerometers Compass,MPU6050,Six axis IMU with three axis gyroscope and three axis accelerometer I2C digital output,7
+MOD Accelerometers Compass,ADXL335,Three axis analog accelerometer low noise continuous analog voltage output,4
+MOD Accelerometers Compass,BMI160,Six axis IMU low power three axis gyro plus three axis accelerometer high bandwidth,4
+MOD Accelerometers Compass,GY-273,Three axis magnetometer module based on the QMC5883L digital magnetic field sensor,3
+MOD ADC,ADS1115,Sixteen bit four channel ADC with programmable gain and I2C interface high resolution,7
+MOD ADC,CS1237,Twenty four bit delta sigma ADC low noise used for precision measurements,3
+MOD ADC,ADS1232,Twenty four bit load cell ADC dual channel with low noise PGA ideal for scales,2
+MOD Audio,PCM5100,Stereo audio DAC low noise high dynamic range I2S digital audio input,1
+MOD Audio,PAM8403,Three watt by two class D audio amplifier high efficiency low heat output,3
+MOD Audio,MAX4466,Microphone preamplifier low noise adjustable gain ideal for audio sensing,4
+MOD Audio,ISD1820,Voice recorder playback module on board mic speaker drive simple trigger interface,3
+MOD Barometric,BMP180,Barometric pressure and temperature sensor high accuracy ultra low power,1
+MOD Barometric,BMP280,Barometric pressure and temperature sensor high precision I2C or SPI digital output,51
+MOD Barometric,BMP390,Barometric pressure and temperature sensor ultra high resolution next generation Bosch sensor,1
+MOD CANBUS RS485,RS485,RS485 transceiver board differential communication long distance noise resistant,—
+MOD CO2 VOC Humidity LUX,CO2 SCD41,High accuracy NDIR CO2 sensor photoacoustic measurement low power digital interface,3
+MOD CO2 VOC Humidity LUX,AHT2X,Temperature and humidity sensor fast response factory calibrated I2C digital output,4
+MOD CO2 VOC Humidity LUX,MICS6814,Multi gas sensor detecting CO NH3 NO2 with analog resistance outputs,1
+MOD CO2 VOC Humidity LUX,MHZ16,NDIR CO2 sensor non dispersive infrared digital UART output high stability,1
+MOD CO2 VOC Humidity LUX,BME280,Environmental sensor measuring temperature humidity and pressure high precision,5
+MOD CO2 VOC Humidity LUX,VMEL,Infrared and optical sensor module broad spectrum light detection,3
+MOD DXLR-02 433MHz,,,
+MOD DXLR-02 900MHz,,,
+MOD DXLR-03 433MHz High Power,,,
+MOD EBYTE 2.4GHz,,,
+MOD GPS GPS Aerials,NEO-6M,GPS module uBlox sixth generation high sensitivity cold start under 30 seconds supports UART positioning updates up to 5Hz,4
+MOD GPS GPS Aerials,L80R,GPS receiver Quectel high performance integrated patch antenna low power fast TTFF ideal for embedded trackers,2
+MOD GPS GPS Aerials,NEO-8M,GNSS receiver uBlox eighth generation supports GPS GLONASS Galileo BeiDou high accuracy low noise digital NMEA output,2
+MOD GPS GPS Aerials,NEO-8M antenna,External active antenna optimized for uBlox GNSS modules low noise amplifier SMA connector,2
+MOD H Bridges,D4184,MOSFET switch dual N channel MOSFET module logic level drive handles high current loads efficient low heat,9
+MOD H Bridges,IRF520,MOSFET module breakout board using IRF520 N channel power MOSFET suitable for medium power switching,1
+MOD H Bridges,High power MOS 20A switch,Power MOS module high current solid state switching up to 20A logic level trigger protection circuitry,10
+MOD Joysticks (&TH),,,
+MOD LIPO Charging,,,
+MOD Loadcell Amplifiers,,,
+MOD Logic Level Shifters,,,
+MOD MESHTASTIC,,,
+MOD MISC Sensors 1,,,
+MOD MISC Sensors 2,,,
+MOD MISC Wireless,,,
+MOD MOSFET switches MOS Switch,,,
+MOD MQ Gas Sensors,,,
+MOD NRF Wireless (&SMD),,,
+MOD OLED 128x64 128x32,128x64,OLED display monochrome I2C or SPI,13
+MOD OLED 128x64 128x33,128x32,OLED display monochrome I2C,8
+MOD OLED 128x64 128x34,128x64 Multicolour,Multi colour OLED SPI interface,1
+MOD OpenLog Real Time Clocks,OpenLog,Data logger microSD serial logging,10
+MOD OpenLog Real Time Clocks,Real Time Clock,RTC module battery backup I2C,3
+MOD PWM to Voltage,PWM module,PWM to voltage converter analog output smoothing,0
+MOD Radar IR gate Laser,HLK LD2410C,mmWave radar presence detector 24GHz,2
+MOD Radar IR gate Laser,HLK LD2420,mmWave radar motion sensor 24GHz,6
+MOD SD Card Slots,SD module level shifter,SD breakout SPI safe for 5V,14
+MOD SD Card Slots,SD module no shifter,SD breakout SPI 3.3V only,8
+MOD Strain Pressure,HX711 module,Strain and pressure sensor amplifier,0
+MOD TDS Sensor Flow Sensor Turbidity Sensor,Water quality module,TDS turbidity and flow sensing interface,0
+MOD Thermocouples,MAX6675,K type thermocouple interface SPI,3
+MOD Thermocouples,DS18B20,Digital temperature probe one wire,2
+MOD Thermocouples,MAX31865,RTD PT100 PT1000 interface high accuracy,3
+MOD Ultrasonic Laser Range Finder,VL53L0X,Laser time of flight distance sensor,9
+MOD Ultrasonic Laser Range Finder,HC SR04,Ultrasonic distance sensor echo trigger,8
+MOD Voltage Regulators,,,
+MOD Waterproof Ultrasonic,,,
+MOD XBee Wireless Com,Boards,Mixed dev boards,3
+MOD XBee Wireless Com,Programmers,Programmer tools,3
+HARDWARE 3V Motors,3V Motors,,
+HARDWARE 5V Motor 60/28 RPM,5V Motor 60/28 RPM,,
+HARDWARE Bearings,Bearings,,
+HARDWARE Boat Motors,Boat Motors,,
+HARDWARE Current Clamps,240V current clamps,,
+HARDWARE Drone Release Mechanism,Drone Release Mechanism,,
+HARDWARE Fingerprint Scanner,Fingerprint Scanner,,
+HARDWARE Heating Cooling,Peltier Cooler,,
+HARDWARE Heating Cooling,PTC 200C,,
+HARDWARE I2C LCD screen,I2C LCD Display,,
+HARDWARE LCD Touch screen,LCD Touch Screen,,
+HARDWARE Loadcells,100g Loadcell,100 g strain gauge load cell,4
+HARDWARE Loadcells,10kg small,10 kg load cell,1
+HARDWARE Loadcells,20kg small,20 kg load cell,1
+HARDWARE Loadcells,5kg large,5 kg load cell,1
+HARDWARE Loadcells,1kg small,1 kg load cell,10
+HARDWARE MISC Motors,MISC Motors,,
+HARDWARE Membrane Keypads,Membrane Keypads,,
+HARDWARE Optical,Diffraction Gratings,,
+HARDWARE Optical,Lenses & Filters,,
+HARDWARE Perf Board,Perf Board,,
+HARDWARE Rotary Encoder,Rotary Encoder,,
+HARDWARE Rubber Balls,Rubber Balls,,
+HARDWARE SD Cards,SD Cards,,
+HARDWARE Servos Solenoids,Servos & Solenoids,,
+HARDWARE SMA Cables,SMA Cables,,
+HARDWARE Spark Generator,High Voltage Spark Generator,,
+HARDWARE Speakers,Speakers,,
+HARDWARE Speakers (High Quality),Speakers (High Quality),,
+HARDWARE Speakers (Low Quality),Speakers (Low Quality),,
+HARDWARE Thermocouple stainless tube,Thermocouple stainless tube,,
+HARDWARE TH Linear CCD,TCD1304AP,Linear CCD,2
+HARDWARE USB Camera,USB Camera,,
+HARDWARE USB Memory,USB Memory,,
+TH AAA Battery Holders,,,
+TH Buzzers Piezo Microphones,,,
+TH Capacitors (Large),,,
+TH Capacitors (Small),,,
+TH Diodes Bridge Rectifiers,,,
+TH Diodes Bridge Rectifiers,,,
+TH Large Unsorted Resistors,,,
+TH Mosfet Transistors,,,
+TH Perf Board,,,
+TH Potentiometers,,,
+TH Relays 3V 240V,,,
+TH Resistors,,,
+TH Sensors,,,
+TH Transformers,,,
+TH USB Socket,,,
+TH Voltage Regulators,,,
+PROJECT 100g Loadcell,,,
+PROJECT 80PX Camera (board),,,
+PROJECT CanSat,,,
+PROJECT CO2 (Parts),,,
+PROJECT Colorimeter sensor,,,
+PROJECT EKG,,,
+PROJECT ESP32 Breadboard,,,
+PROJECT Hall Effect (board),,,
+PROJECT Historical Boards,,,
+PROJECT HP Rocket PCB,,,
+PROJECT Particle Detector,,,
+PROJECT Rubber Ducky,,,
+PROJECT Series circuit,,,
+PROJECT Thermal Camera,,,
+PROJECT Universal Logger PCB,,,
+PROJECT USB-UART Programmer,,,
+DEV BOARD Arduino Mega UNO,,,
+DEV BOARD Arduino Nano 328P,,,
+DEV BOARD Arduino Pro Micro,,,
+DEV BOARD Arduino Various Boards,,,
+DEV BOARD ESP32 Various Boards,,,
+DEV BOARD ESP32 WROOM CH340C,,,
+DEV BOARD ESP32 WROOM CH340C,,,
+DEV BOARD ESP32 WROOM CH340C,,,
+DEV BOARD ESP32 WROOM CH340C,,,
+DEV BOARD ESP32 WROOM CH340C,,,
+DEV BOARD ESP32 WROOM CH340C,,,
+DEV BOARD ESP32 WROOM CP2101 Micro USB,,,
+DEV BOARD ESP32 WROOM CP2101 USB-C,,,
+DEV BOARD ESP32-CAM,,,
+DEV BOARD Meshtastic,,,
+DEV BOARD NRF Wireless (&SMD),,,
+DEV BOARD Other,,,
+DEV BOARD Other,,,
+DEV BOARD RP2040 Zero Pico,,,
+SMD LED,1206 LED,Red LED,200
+SMD LED,1206 LED,Blue LED,200
+SMD LED,1206 LED,Yellow LED,200
+SMD LED,1206 LED,Green LED,200
+SMD LED,1206 LED,Orange LED,100
+SMD LED,1206 LED,White LED,200
+SMD LED,1209 LED,UV LED (395nm),100
+SMD LED,0402 LED,Red,20
+SMD LED,0402 LED,Blue,20
+SMD LED,0402 LED,Green,20
+SMD LED,0402 LED,Yellow,20
+SMD LED,0603 LED,Red,100
+SMD LED,0603 LED,Orange,100
+SMD LED,0603 LED,Yellow,100
+SMD LED,0603 LED,Green,100
+SMD LED,0603 LED,Blue,100
+SMD LED,0603 LED,White,100
+SMD LED,0805 LED,Red,100
+SMD LED,0805 LED,Orange,100
+SMD LED,0805 LED,Yellow,100
+SMD LED,0805 LED,Green,100
+SMD LED,0805 LED,Blue,100
+SMD LED,0805 LED,White,100
+SMD LED,Sunlike square LED,White,50
+SMD LED,5730 LED,White,100
+SMD LED,3535 LED,275nm UVC,10
+SMD 1206 Resistors,4.7K,resistor,300
+SMD 1206 Resistors,470R,resistor,100
+SMD 1206 Resistors,5.1K,resistor,100
+SMD 1206 Resistors,22R,resistor,200
+SMD 1206 Capacitors,22pF,Capacitor,200
+SMD 1206 Capacitors,100nF,Capacitor,100
+SMD 1206 Capacitors,1uF,Capacitor,100
+SMD 1206 Capacitors,4.7uF,Capacitor,200
+SMD 1206 Capacitors,47uF,Capacitor,100
+SMD 1206 Capacitors,100uF,Capacitor,200
+SMD 0603 Resistor Array,2.2k,resistor array,200
+SMD 0603 Resistor Array,3.3k,resistor array,200
+SMD 0603 Resistor Array,1k,resistor array,300
+SMD 0603 Resistor Array,10k,resistor array,300
+SMD 0603 Resistor Array,0R,resistor array,200
