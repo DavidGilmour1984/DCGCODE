@@ -481,11 +481,52 @@ LM339     Quad Differential Comparators                          50"></textarea>
   // --- Box selection and search (edit mode) ---
 
   function handleBoxChange() {
-    const select = document.getElementById('boxSelect');
-    currentBox = select.value || "";
+  const select = document.getElementById('boxSelect');
+  const selectedName = select.value || "";
+  if (!selectedName) return;
+
+  // Load selected box name into "New box" field for editing
+  document.getElementById('newBoxInput').value = selectedName;
+
+  // If user has changed the text, we detect rename on blur
+  const newBoxInput = document.getElementById('newBoxInput');
+  newBoxInput.onblur = function () {
+    const newName = newBoxInput.value.trim();
+    if (!newName || newName === selectedName) return;
+
+    // --- PERFORM RENAME ---
+    // Move all items from old box name to new box name
+    items.forEach(it => {
+      if (it.box === selectedName) {
+        it.box = newName;
+      }
+    });
+
+    // Update box set
+    boxes.delete(selectedName);
+    boxes.add(newName);
+
+    // Update current box
+    currentBox = newName;
+
+    // Refresh UI
+    const searchText = (document.getElementById('boxSearchInput').value || "").trim().toLowerCase();
+    renderBoxSelect(searchText);
     renderItemsTable();
+    renderStats();
+    renderSearchResults();
+
+    // Save
     saveToLocalStorage();
-  }
+  };
+
+  // Set current box (before rename)
+  currentBox = selectedName;
+  renderItemsTable();
+  saveToLocalStorage();
+}
+
+
 
   function handleBoxSearch() {
     const filterText = (document.getElementById('boxSearchInput').value || "").trim().toLowerCase();
