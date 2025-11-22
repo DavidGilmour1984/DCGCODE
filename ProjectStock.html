@@ -200,8 +200,8 @@
         <select id="boxSelect"></select>
       </div>
       <div class="col">
-        <label for="newBoxInput">Or add a new box</label>
-        <input type="text" id="newBoxInput" placeholder="New box name">
+        <label for="newBoxInput">Add / rename box</label>
+        <input type="text" id="newBoxInput" placeholder="New box name or rename selected box">
       </div>
     </div>
 
@@ -222,12 +222,12 @@
 
     <div class="button-row">
       <button class="primary-btn" id="addItemBtn">Add Component to Box</button>
-      <button class="secondary-btn" id="togglePasteAreaBtn">Show/Hide paste area</button>
       <button class="primary-btn" id="applyPasteBtn">Add Pasted Items to Box</button>
       <button class="secondary-btn" id="downloadBtn">Export CSV</button>
     </div>
 
-    <div id="pasteArea" style="display:none; margin-top:15px;">
+    <!-- Paste area ALWAYS visible -->
+    <div id="pasteArea" style="margin-top:15px;">
       <label for="pasteTextarea">
         Paste rows from your spreadsheet (e.g. <em>Component&nbsp;&nbsp;Description&nbsp;&nbsp;Quantity</em>).
       </label>
@@ -310,7 +310,6 @@ LM339     Quad Differential Comparators                          50"></textarea>
   document.getElementById('csvFileInput').addEventListener('change', handleFileUpload);
   document.getElementById('addItemBtn').addEventListener('click', addItem);
   document.getElementById('downloadBtn').addEventListener('click', exportCSV);
-  document.getElementById('togglePasteAreaBtn').addEventListener('click', togglePasteArea);
   document.getElementById('applyPasteBtn').addEventListener('click', applyPasteItems);
   document.getElementById('boxSelect').addEventListener('change', handleBoxChange);
   document.getElementById('boxSearchInput').addEventListener('input', handleBoxSearch);
@@ -397,6 +396,12 @@ LM339     Quad Differential Comparators                          50"></textarea>
 
     const reader = new FileReader();
     reader.onload = function(e) {
+      // FULL RESET to prevent ghost boxes/items from previous sessions
+      localStorage.removeItem(STORAGE_KEY);
+      boxes = new Set();
+      items = [];
+      currentBox = "";
+
       const text = e.target.result;
       loadFromCSVText(text);
     };
@@ -481,52 +486,56 @@ LM339     Quad Differential Comparators                          50"></textarea>
   // --- Box selection and search (edit mode) ---
 
   function handleBoxChange() {
-  const select = document.getElementById('boxSelect');
-  const selectedName = select.value || "";
-  if (!selectedName) return;
+    const select = document.getElementById('boxSelect');
+    const oldName = (select.value || "").trim();
+    if (!oldName) return;
 
-  // Load selected box name into "New box" field for editing
-  document.getElementById('newBoxInput').value = selectedName;
+    const renameInput = document.getElementById('newBoxInput');
 
-  // If user has changed the text, we detect rename on blur
-  const newBoxInput = document.getElementById('newBoxInput');
-  newBoxInput.onblur = function () {
-    const newName = newBoxInput.value.trim();
-    if (!newName || newName === selectedName) return;
+    // Put the current box name into the rename field
+    renameInput.value = oldName;
 
-    // --- PERFORM RENAME ---
-    // Move all items from old box name to new box name
-    items.forEach(it => {
-      if (it.box === selectedName) {
-        it.box = newName;
-      }
-    });
+    // Universal rename function (shared by input + blur)
+    function commitRename() {
+      const newName = renameInput.value.trim();
+      if (!newName || newName === oldName) return;
 
-    // Update box set
-    boxes.delete(selectedName);
-    boxes.add(newName);
+      // Move items to new box name
+      items.forEach(it => {
+        if (it.box === oldName) it.box = newName;
+      });
 
-    // Update current box
-    currentBox = newName;
+      // Update box set
+      boxes.delete(oldName);
+      boxes.add(newName);
 
-    // Refresh UI
-    const searchText = (document.getElementById('boxSearchInput').value || "").trim().toLowerCase();
-    renderBoxSelect(searchText);
+      // Switch selection to the new name
+      currentBox = newName;
+
+      // Refresh UI across system
+      const searchText =
+        (document.getElementById('boxSearchInput').value || "").trim().toLowerCase();
+
+      renderBoxSelect(searchText);
+      renderItemsTable();
+      renderStats();
+      renderSearchResults();
+
+      // Save immediately
+      saveToLocalStorage();
+    }
+
+    // Save while typing (instant rename)
+    renameInput.oninput = commitRename;
+
+    // Save when clicking away
+    renameInput.onblur = commitRename;
+
+    // Load items for selected box
+    currentBox = oldName;
     renderItemsTable();
-    renderStats();
-    renderSearchResults();
-
-    // Save
     saveToLocalStorage();
-  };
-
-  // Set current box (before rename)
-  currentBox = selectedName;
-  renderItemsTable();
-  saveToLocalStorage();
-}
-
-
+  }
 
   function handleBoxSearch() {
     const filterText = (document.getElementById('boxSearchInput').value || "").trim().toLowerCase();
@@ -538,30 +547,69 @@ LM339     Quad Differential Comparators                          50"></textarea>
     const select = document.getElementById('boxSelect');
     const boxArray = Array.from(boxes).sort((a, b) => a.localeCompare(b));
 
-    const filtered = boxArray.filter(b =>
-      !filterText || b.toLowerCase().includes(filterText)
-    );
+    // Filter with partial match on ANY word
+    const filtered = boxArray.filter(b => {
+      if (!filterText) return true;
+      const words = b.toLowerCase().split(/\s+/);
+      return words.some(w => w.includes(filterText.toLowerCase()));
+    });
 
+    // CASE 1: Search box empty → show all boxes but select NONE
+    if (!filterText) {
+      select.innerHTML =
+        '<option value="">-- Select a box --</option>' +
+        boxArray.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`).join('');
+
+      currentBox = "";
+      document.getElementById('newBoxInput').value = "";
+      renderItemsTable();
+
+      document.getElementById('boxInfo').innerText =
+        `Loaded ${boxArray.length} box(es). Select a box to view items.`;
+      return;
+    }
+
+    // CASE 2: Search active, no matches
     if (!filtered.length) {
       select.innerHTML = '<option value="">No boxes found</option>';
+      currentBox = "";
+      document.getElementById('newBoxInput').value = "";
+      renderItemsTable();
       document.getElementById('boxInfo').innerText = "No box names match the search.";
       return;
     }
 
-    let optionsHtml = "";
-    filtered.forEach(b => {
-      const selectedAttr = (b === currentBox) ? ' selected' : '';
-      optionsHtml += `<option value="${escapeHtml(b)}"${selectedAttr}>${escapeHtml(b)}</option>`;
-    });
-    select.innerHTML = optionsHtml;
+    // CASE 3: Search active, matches available
+    select.innerHTML = filtered
+      .map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`)
+      .join('');
 
-    if (!filtered.includes(currentBox)) {
-      currentBox = filtered[0];
-      select.value = currentBox;
+    // Auto-select box if only one result
+    if (filtered.length === 1) {
+      const only = filtered[0];
+      select.value = only;
+      currentBox = only;
+
+      // Update rename input automatically
+      document.getElementById('newBoxInput').value = only;
+
+      renderItemsTable();
+      document.getElementById('boxInfo').innerText =
+        `Loaded ${boxArray.length} box(es). Showing items for: "${only}".`;
+      saveToLocalStorage();
+      return;
     }
 
+    // If currentBox not in filtered list, clear it
+    if (!filtered.includes(currentBox)) {
+      currentBox = "";
+      document.getElementById('newBoxInput').value = "";
+      renderItemsTable();
+    }
+
+    // Update info
     document.getElementById('boxInfo').innerText =
-      `Loaded ${boxArray.length} box(es). Showing items for: "${currentBox}".`;
+      `Loaded ${boxArray.length} box(es). Showing items for: "${currentBox || "None selected"}".`;
   }
 
   // --- Items table (edit mode) ---
@@ -574,8 +622,8 @@ LM339     Quad Differential Comparators                          50"></textarea>
       .map((item, index) => ({ ...item, index }))
       .filter(it =>
         it.box &&
-        it.component &&
-        (!currentBox || it.box === currentBox)
+        currentBox &&
+        it.box === currentBox
       );
 
     if (!visibleItems.length) {
@@ -674,11 +722,6 @@ LM339     Quad Differential Comparators                          50"></textarea>
 
   // --- Paste area ---
 
-  function togglePasteArea() {
-    const div = document.getElementById('pasteArea');
-    div.style.display = (div.style.display === "none" || !div.style.display) ? "block" : "none";
-  }
-
   function applyPasteItems() {
     let box = (document.getElementById('boxSelect').value || "").trim();
     const newBox = (document.getElementById('newBoxInput').value || "").trim();
@@ -757,63 +800,106 @@ LM339     Quad Differential Comparators                          50"></textarea>
   // --- Stats (search tab) ---
 
   // Category is the FIRST WORD of the box name (cleaned)
-  function categoryFromBox(box) {
-    if (!box) return "Unknown";
-    const firstWord = box.trim().split(/\s+/)[0];
-    const clean = firstWord.replace(/[^A-Za-z0-9]/g, '');
-    if (!clean) return "Unknown";
-    return clean; // keep original-style casing (SMD, TH, MOD, Project, Hardware, etc.)
-  }
+function categoryFromBox(box) {
+  if (!box) return "OTHER";
+  const name = box.trim();
 
-  function renderStats() {
-    const statsContainer = document.getElementById('statsContainer');
-    statsContainer.innerHTML = "";
+  if (name.startsWith("SMD")) return "SMD";
+  if (name.startsWith("MOD")) return "MOD";
+  if (name.startsWith("HARDWARE")) return "HARDWARE";
+  if (name.startsWith("TH")) return "TH";
+  if (name.startsWith("Project")) return "PROJECT";
+  if (name.startsWith("DEV BOARD")) return "DEV BOARD";
+  if (name.startsWith("REELS")) return "REELS";
 
-    const categories = {};
+  return "OTHER";
+}
 
-    const visibleItems = items.filter(it => it.box && it.component);
 
-    for (const it of visibleItems) {
-      const cat = categoryFromBox(it.box);
-      if (!categories[cat]) {
-        categories[cat] = {
-          boxes: new Set(),
-          components: new Set(),
-          totalQty: 0
-        };
+function renderStats() {
+  const statsContainer = document.getElementById('statsContainer');
+  statsContainer.innerHTML = "";
+
+  // Define ALL categories you want to appear
+  const allCategories = [
+    "SMD",
+    "MOD",
+    "HARDWARE",
+    "TH",
+    "PROJECT",
+    "DEV BOARD",
+    "REELS"
+  ];
+
+  // Prepare stats holders
+  const categories = {};
+  allCategories.forEach(cat => {
+    categories[cat] = {
+      boxes: new Set(),
+      components: new Set(),
+      totalQty: 0
+    };
+  });
+
+  // Process existing items
+  for (const it of items) {
+    if (!it.box) continue;
+    const cat = categoryFromBox(it.box);
+
+    if (!categories[cat]) {
+      // Unknown → put into OTHER
+      if (!categories["OTHER"]) {
+        categories["OTHER"] = { boxes: new Set(), components: new Set(), totalQty: 0 };
       }
-      categories[cat].boxes.add(it.box);
-      categories[cat].components.add(it.component);
-
+      categories["OTHER"].boxes.add(it.box);
+      if (it.component) categories["OTHER"].components.add(it.component);
       const q = parseInt(it.quantity, 10);
-      if (!isNaN(q)) {
-        categories[cat].totalQty += q;
-      }
+      if (!isNaN(q)) categories["OTHER"].totalQty += q;
+      continue;
     }
 
-    const catNames = Object.keys(categories).sort();
+    categories[cat].boxes.add(it.box);
+    if (it.component) categories[cat].components.add(it.component);
 
-    if (!catNames.length) {
-      statsContainer.innerHTML =
-        '<div class="stat-card"><div class="stat-title">No data</div><div>Add items in Edit Inventory to see statistics.</div></div>';
-      return;
-    }
-
-    for (const cat of catNames) {
-      const data = categories[cat];
-
-      const card = document.createElement('div');
-      card.className = "stat-card";
-
-      card.innerHTML =
-        `<div class="stat-title">${cat}</div>
-         <div>Boxes: ${data.boxes.size}</div>
-         <div>Unique items: ${data.components.size}</div>
-         <div>Total quantity: ${data.totalQty}</div>`;
-
-      statsContainer.appendChild(card);
-    }
+    const q = parseInt(it.quantity, 10);
+    if (!isNaN(q)) categories[cat].totalQty += q;
   }
+
+  // Rendering cards
+  let grandBoxes = 0;
+  let grandItems = 0;
+  let grandQty = 0;
+
+  allCategories.forEach(cat => {
+    const data = categories[cat];
+    grandBoxes += data.boxes.size;
+    grandItems += data.components.size;
+    grandQty += data.totalQty;
+
+    const card = document.createElement('div');
+    card.className = "stat-card";
+
+    card.innerHTML =
+      `<div class="stat-title">${cat}</div>
+       <div>Boxes: ${data.boxes.size}</div>
+       <div>Unique items: ${data.components.size}</div>
+       <div>Total quantity: ${data.totalQty}</div>`;
+
+    statsContainer.appendChild(card);
+  });
+
+  // Add TOTAL CARD
+  const totalCard = document.createElement('div');
+  totalCard.className = "stat-card";
+  totalCard.innerHTML =
+    `<div class="stat-title">TOTAL</div>
+     <div>Boxes: ${grandBoxes}</div>
+     <div>Unique items: ${grandItems}</div>
+     <div>Total quantity: ${grandQty}</div>`;
+
+  statsContainer.appendChild(totalCard);
+}
+
 
   // --- Global search (search tab) ---
 
