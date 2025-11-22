@@ -808,7 +808,7 @@ function categoryFromBox(box) {
   if (name.startsWith("MOD")) return "MOD";
   if (name.startsWith("HARDWARE")) return "HARDWARE";
   if (name.startsWith("TH")) return "TH";
-  if (name.startsWith("Project")) return "PROJECT";
+if (/^project/i.test(name.trim())) return "PROJECT";
   if (name.startsWith("DEV BOARD")) return "DEV BOARD";
   if (name.startsWith("REELS")) return "REELS";
 
